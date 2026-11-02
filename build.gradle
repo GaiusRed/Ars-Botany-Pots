@@ -1,0 +1,68 @@
+plugins {
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
+}
+
+version = mod_version
+group = mod_group_id
+base.archivesName = mod_id
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.withSourcesJar()
+
+repositories {
+    exclusiveContent {
+        forRepository {
+            maven {
+                name = 'CurseMaven'
+                url = 'https://cursemaven.com'
+            }
+        }
+        filter { includeGroup 'curse.maven' }
+    }
+}
+
+neoForge {
+    version = neo_version
+    runs {
+        client { client() }
+        server {
+            server()
+            programArgument '--nogui'
+        }
+    }
+    mods {
+        sourcepots { sourceSet sourceSets.main }
+    }
+}
+
+// Upstream Git submodules are reference sources, never included Gradle builds.
+// Published jars match the pack; their bundled libraries load through NeoForge.
+dependencies {
+    implementation "curse.maven:botany-pots-353928:${botanypots_file}"
+    implementation "curse.maven:starbunclemania-746215:${starbunclemania_file}"
+    implementation "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
+    implementation "curse.maven:mekanism-268560:${mekanism_file}"
+    runtimeOnly "curse.maven:ars-elemental-561470:${ars_elemental_file}"
+    runtimeOnly "curse.maven:bookshelf-228525:${bookshelf_file}"
+    runtimeOnly "curse.maven:prickle-1023259:${prickle_file}"
+    runtimeOnly "curse.maven:curios-309927:${curios_file}"
+    runtimeOnly "curse.maven:geckolib-388172:${geckolib_file}"
+}
+
+tasks.named('processResources', ProcessResources) {
+    def properties = [mod_id: mod_id, mod_name: mod_name,
+                      mod_version: mod_version, mod_license: mod_license,
+                      neo_version: neo_version]
+    inputs.properties properties
+    filesMatching('META-INF/neoforge.mods.toml') { expand properties }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = 21
+}
+
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}

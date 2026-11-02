@@ -1,0 +1,88 @@
+{
+  "checked_at": "2026-11-02",
+  "pack": {
+    "name": "ATM10AERO-0.8.0",
+    "project_id": 1644918,
+    "file_id": 9366703,
+    "published_at": "2026-10-29T22:48:28Z",
+    "release_url": "https://www.curseforge.com/minecraft/modpacks/all-the-mods-10-aeronautics/files/9366703",
+    "metadata_url": "https://api.cfwidget.com/1644918",
+    "archive_url": "https://mediafilez.forgecdn.net/files/9366/703/ATM10AERO-0.8.0.zip",
+    "archive_sha256": "4ef7b35ac9cdc1b8397c2fccdf31a2e65f16b4e3d5fa902be22ae78b44d8bb48",
+    "manifest_sha256": "f807b62e08f3c055a41419f2d015ddb456a77a15705ba006615fa55ef1039fe9",
+    "official_repository_commit": "15a32d1fdb9a68bf4060e62136e2c695a6089da6",
+    "minecraft": "1.21.1",
+    "mod_loader": "neoforge-21.1.250"
+  },
+  "artifacts": [
+    {
+      "mod_id": "botanypots", "project_id": 353928, "file_id": 8243851,
+      "filename": "botanypots-neoforge-1.21.1-21.1.44.jar",
+      "sha256": "45b23ac195511f724f62ab5f0c2d7a1c2c2403ff324a7403a1142e28a7d65edd"
+    },
+    {
+      "mod_id": "starbunclemania", "project_id": 746215, "file_id": 8964554,
+      "filename": "starbunclemania-1.21.1-1.5.9.jar",
+      "sha256": "193b43af8169ff7551504c895e674e39201d026e189cecb16ca2cfaec7903c72"
+    },
+    {
+      "mod_id": "ars_nouveau", "project_id": 401955, "file_id": 9052154,
+      "filename": "ars_nouveau-1.21.1-5.13.3.jar",
+      "sha256": "45c1b6022d8e63464177c1f822bda22c3d6fb66970857fd7677e4e3ccffd259f"
+    },
+    {
+      "mod_id": "ars_elemental", "project_id": 561470, "file_id": 9057244,
+      "filename": "ars_elemental-1.21.1-0.7.10.4.jar",
+      "sha256": "9ba4393c98228bb1647e3786c71c30c7eb97574b9e65baba14f34c92f7b86eb9"
+    },
+    {
+      "mod_id": "mekanism", "project_id": 268560, "file_id": 7904058,
+      "filename": "Mekanism-1.21.1-10.7.19.85.jar",
+      "sha256": "004dbc9f3106f4d192aeaa1ee1190dd16ec9ca8059ed3d093b80034f4c574f43"
+    },
+    {
+      "mod_id": "bookshelf", "project_id": 228525, "file_id": 7606240,
+      "filename": "bookshelf-neoforge-1.21.1-21.1.81.jar",
+      "sha256": "19e88d40da2b6a114c2b808f7fb469d96e66a5379df0a8a43fcb7834498b3e76"
+    },
+    {
+      "mod_id": "prickle", "project_id": 1023259, "file_id": 6961457,
+      "filename": "prickle-neoforge-1.21.1-21.1.11.jar",
+      "sha256": "ccf46c442ed3c7fe41ad056f0940560829ec4dd88360985dfacd78f4614eb167"
+    },
+    {
+      "mod_id": "curios", "project_id": 309927, "file_id": 6529130,
+      "filename": "curios-neoforge-9.5.1+1.21.1.jar",
+      "sha256": "a45df2125c26219974aba7507ffc9afe7b83acc941a386af3faacb1cc0056fde"
+    },
+    {
+      "mod_id": "geckolib", "project_id": 388172, "file_id": 8893490,
+      "filename": "geckolib-neoforge-1.21.1-4.9.3.jar",
+      "sha256": "20a1995e4074f387ff549e2c57ea79dd7d41ee83c6afb9dd6a6e840e592d1c47"
+    }
+  ],
+  "bundled_mod_libraries": {
+    "ars_nouveau": {
+      "nuggets": "1.1.0.48",
+      "infiniverse_curseforge_file": 5486311,
+      "lambdynamiclights_api": "4.5.1+1.21.1"
+    },
+    "starbunclemania": { "sauce": "0.0.40.82" },
+    "ars_elemental": { "sauce": "0.0.61.100" }
+  },
+  "source_pins": {
+    "upstream/Ars-Elemental": "b1b1e1dbb95b8544d3d34917758dbd2b3fa1e70c",
+    "upstream/Ars-Nouveau": "d9a945b58b658d3bd959cf5df32aed2af477e273",
+    "upstream/Bookshelf": "5dead24858668c3de411cec7956158dfc2aeeecf",
+    "upstream/BotanyPots": "335c997dc456f6ea2b9bc3ff13319dfb791803e6",
+    "upstream/Curios": "6b122c8a7e2b514fd94197459ade11f19a0bfb09",
+    "upstream/GeckoLib": "cce098097cdd2084d8383bec593e0db79e0ed5a0",
+    "upstream/Infiniverse": "fc90511968e12f878bf0c95b32d8036f70275a0b",
+    "upstream/LambDynamicLights": "ce508d69b96a2a3f8850919b1ab9a0365f455338",
+    "upstream/Mekanism": "a00109e4856fd38b9c5b3dd7f22ce4a59cd65a80",
+    "upstream/Nuggets": "15799e0ddd57050c0878571387a7a742beae451a",
+    "upstream/PrickleMC": "2dc52ff11b71bfce5106ebf8926b05126ba53389",
+    "upstream/SauceLib": "a8712033111cc47a420285c317cc8c6e63c3d24d",
+    "upstream/StarbuncleMania": "6beb29d6394d27e0f969f8e395993103a0b2aad5"
+  }
+}

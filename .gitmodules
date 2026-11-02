@@ -1,0 +1,52 @@
+[submodule "upstream/BotanyPots"]
+	path = upstream/BotanyPots
+	url = https://github.com/Darkhax-Minecraft/BotanyPots.git
+	branch = 1.21.1
+[submodule "upstream/StarbuncleMania"]
+	path = upstream/StarbuncleMania
+	url = https://github.com/Alexthw46/StarbuncleMania.git
+	branch = 1.21
+[submodule "upstream/Bookshelf"]
+	path = upstream/Bookshelf
+	url = https://github.com/Darkhax-Minecraft/Bookshelf.git
+	branch = 1.21.1
+[submodule "upstream/PrickleMC"]
+	path = upstream/PrickleMC
+	url = https://github.com/Darkhax-Minecraft/PrickleMC.git
+	branch = 1.21.1
+[submodule "upstream/Ars-Nouveau"]
+	path = upstream/Ars-Nouveau
+	url = https://github.com/baileyholl/Ars-Nouveau.git
+	branch = main
+[submodule "upstream/Ars-Elemental"]
+	path = upstream/Ars-Elemental
+	url = https://github.com/Alexthw46/Ars-Elemental.git
+	branch = 1.21
+[submodule "upstream/SauceLib"]
+	path = upstream/SauceLib
+	url = https://github.com/Alexthw46/SauceLib.git
+	branch = 1.21
+[submodule "upstream/GeckoLib"]
+	path = upstream/GeckoLib
+	url = https://github.com/bernie-g/geckolib.git
+	branch = 1.21.1
+[submodule "upstream/Curios"]
+	path = upstream/Curios
+	url = https://github.com/TheIllusiveC4/Curios.git
+	branch = 1.21.1
+[submodule "upstream/Mekanism"]
+	path = upstream/Mekanism
+	url = https://github.com/mekanism/Mekanism.git
+	branch = 1.21.x
+[submodule "upstream/Nuggets"]
+	path = upstream/Nuggets
+	url = https://github.com/baileyholl/nuggets.git
+	branch = main
+[submodule "upstream/Infiniverse"]
+	path = upstream/Infiniverse
+	url = https://github.com/Commoble/infiniverse.git
+	branch = 1.21.1
+[submodule "upstream/LambDynamicLights"]
+	path = upstream/LambDynamicLights
+	url = https://github.com/LambdAurora/LambDynamicLights.git
+	branch = 1.21
