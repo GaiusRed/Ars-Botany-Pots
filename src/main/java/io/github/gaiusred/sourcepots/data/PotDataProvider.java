@@ -159,4 +159,3 @@ public final class PotDataProvider implements DataProvider {
 
     @Override public String getName() { return "Source Pots variant resources"; }
 }
-

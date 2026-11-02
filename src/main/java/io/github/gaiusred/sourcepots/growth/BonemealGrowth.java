@@ -1,9 +1,7 @@
 package io.github.gaiusred.sourcepots.growth;
 
 import com.mojang.logging.LogUtils;
-import io.github.gaiusred.sourcepots.config.SourcePotsConfig;
 import io.github.gaiusred.sourcepots.source.SourceSettings;
-import io.github.gaiusred.sourcepots.source.SourceMode;
 import net.darkhax.bookshelf.common.api.function.ReloadableCache;
 import net.darkhax.botanypots.common.api.context.BotanyPotContext;
 import net.darkhax.botanypots.common.api.data.recipes.crop.Crop;
@@ -30,11 +28,6 @@ public final class BonemealGrowth {
     private static final ResourceLocation MISSING = ResourceLocation.fromNamespaceAndPath("sourcepots", "missing_bonemeal");
     // Only diagnostic identities are retained. Bookshelf resets this set on server reload.
     private final ReloadableCache<Set<ResourceLocation>> reported = ReloadableCache.of(level -> new HashSet<>());
-
-    public int growthAmount(BotanyPotBlockEntity pot, ServerLevel level, SourceMode mode) {
-        if (!isEligible(pot, level)) return 0;
-        return sampleGrowth(SourcePotsConfig.snapshot().growth(mode), level.random);
-    }
 
     public int sampleGrowth(SourceSettings.GrowthSettings growth, RandomSource random) {
         // Positive minimum bounds keep this inclusive width within Integer.MAX_VALUE.
@@ -68,11 +61,6 @@ public final class BonemealGrowth {
             return false;
         }
         return true;
-    }
-
-    public boolean apply(BotanyPotBlockEntity pot, int amount) {
-        return amount > 0 && pot.getLevel() instanceof ServerLevel server && isEligible(pot, server)
-                && applyEligibleCredit(pot, amount) < amount;
     }
 
     /** Caller must validate current-tick recipe eligibility before applying retained or purchased credit. */

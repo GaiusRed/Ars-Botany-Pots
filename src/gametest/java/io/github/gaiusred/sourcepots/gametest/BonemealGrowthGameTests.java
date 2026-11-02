@@ -46,9 +46,9 @@ public final class BonemealGrowthGameTests {
     @GameTest(template = "empty", batch = "growth")
     public static void sourceJarDefaultsAdd600To800(GameTestHelper helper) {
         var pot = pot(helper);
-        int amount = GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
+        int amount = GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
         helper.assertTrue(amount >= 600 && amount <= 800, "Default Source amount must be 600..800, got " + amount);
-        helper.assertTrue(GROWTH.apply(pot, amount), "A supported recipe must add growth");
+        helper.assertTrue(GrowthTestSupport.apply(GROWTH, pot, amount), "A supported recipe must add growth");
         helper.assertTrue(pot.growthTime() == amount, "Growth delta must equal selected Source amount");
         helper.succeed();
     }
@@ -58,10 +58,10 @@ public final class BonemealGrowthGameTests {
         var pot = pot(helper);
         int required = pot.getRequiredGrowthTicks();
         pot.updateGrowthTime(required - 30);
-        helper.assertTrue(GROWTH.apply(pot, Integer.MAX_VALUE), "Maximum growth must apply");
+        helper.assertTrue(GrowthTestSupport.apply(GROWTH, pot, Integer.MAX_VALUE), "Maximum growth must apply");
         helper.assertTrue(pot.growthTime() >= required && pot.canHarvest(), "Source must reach maturity without twenty natural ticks");
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Mature crop cannot accept another boost");
-        helper.assertTrue(!GROWTH.apply(pot, 500), "Mature crop cannot apply another boost");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Mature crop cannot accept another boost");
+        helper.assertTrue(!GrowthTestSupport.apply(GROWTH, pot, 500), "Mature crop cannot apply another boost");
         helper.succeed();
     }
 
@@ -73,27 +73,27 @@ public final class BonemealGrowthGameTests {
                 Ingredient.of(Items.DIRT), 20, List.of(), 0, List.of(), Optional.empty(), Optional.empty(), 1, 1)));
         pot.setSeed(seed);
         pot.updateGrowthTime(0);
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0, "Twenty-tick crops must be eligible");
-        helper.assertTrue(GROWTH.apply(pot, 500) && pot.growthTime() == 20 && pot.canHarvest(), "Short crop must mature immediately");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0, "Twenty-tick crops must be eligible");
+        helper.assertTrue(GrowthTestSupport.apply(GROWTH, pot, 500) && pot.growthTime() == 20 && pot.canHarvest(), "Short crop must mature immediately");
         helper.succeed();
     }
 
     @GameTest(template = "empty", batch = "growth")
     public static void invalidSoilOrSeedReturnsZero(GameTestHelper helper) {
         var pot = pot(helper);
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0, "Control crop must be eligible");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0, "Control crop must be eligible");
         pot.setSoilItem(new ItemStack(Items.SAND));
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Valid sand soil cannot sustain wheat");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Valid sand soil cannot sustain wheat");
         pot.setSoilItem(new ItemStack(Items.STICK));
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Unknown soil must be ineligible");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Unknown soil must be ineligible");
         pot.setSoilItem(new ItemStack(Items.DIRT));
         pot.setSeed(new ItemStack(Items.STICK));
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Unknown seed must be ineligible");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Unknown seed must be ineligible");
         pot.setSeed(new ItemStack(Items.WHEAT_SEEDS));
         withFertilizer(helper, fertilizer(500, Optional.of(Ingredient.of(Items.SAND)), Optional.empty()), () ->
-                helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Fertilizer soil restriction must match"));
+                helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Fertilizer soil restriction must match"));
         withFertilizer(helper, fertilizer(500, Optional.empty(), Optional.of(Ingredient.of(Items.BEETROOT_SEEDS))), () ->
-                helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Fertilizer seed restriction must match"));
+                helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 0, "Fertilizer seed restriction must match"));
         helper.succeed();
     }
 
@@ -104,7 +104,7 @@ public final class BonemealGrowthGameTests {
         player.setItemInHand(InteractionHand.MAIN_HAND, new ItemStack(Items.BONE_MEAL, 3));
         var context = new BlockEntityContext(pot, player, InteractionHand.MAIN_HAND);
         var manual = (BasicFertilizer) Fertilizer.getFertilizer(helper.getLevel(), context, context.getInteractionItem()).value();
-        helper.assertTrue(GROWTH.apply(pot, GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR)), "Source must add growth without a player");
+        helper.assertTrue(GrowthTestSupport.apply(GROWTH, pot, GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR)), "Source must add growth without a player");
         helper.assertTrue(pot.canBonemeal(), "Source must preserve ready manual cooldown");
         helper.assertTrue(context.getInteractionItem().getCount() == 3, "Source must not consume manual item");
         pot.updateGrowthTime(0);
@@ -114,7 +114,7 @@ public final class BonemealGrowthGameTests {
         helper.assertTrue(context.getInteractionItem().getCount() == 2, "Manual fertilizer must still consume one item");
         pot.updateGrowthTime(0);
         pot.setBonemealCooldown(7);
-        helper.assertTrue(GROWTH.apply(pot, GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR)), "Source works during manual cooldown");
+        helper.assertTrue(GrowthTestSupport.apply(GROWTH, pot, GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR)), "Source works during manual cooldown");
         helper.assertTrue(!pot.canBonemeal(), "Source must preserve an existing manual cooldown");
         helper.assertTrue(context.getInteractionItem().getCount() == 2, "Source must not consume item during cooldown");
         for (int tick = 0; tick < 6; tick++) {
@@ -130,7 +130,7 @@ public final class BonemealGrowthGameTests {
     @GameTest(template = "empty", batch = "growth")
     public static void missingOrUnsupportedRecipeDoesNotSpend(GameTestHelper helper) {
         var pot = pot(helper);
-        helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0, "Control recipe must work");
+        helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0, "Control recipe must work");
         withFertilizer(helper, null, () -> assertNoSpend(helper, pot));
         withFertilizer(helper, new UnsupportedFertilizer(), () -> assertNoSpend(helper, pot));
         withFertilizer(helper, fertilizer(0, Optional.empty(), Optional.empty()), () -> assertNoSpend(helper, pot));
@@ -172,9 +172,9 @@ public final class BonemealGrowthGameTests {
     public static void configuredMaximumGrowthCapsWithoutOverflow(GameTestHelper helper) {
         try (var ignored = new GrowthConfigFixture(Integer.MAX_VALUE, Integer.MAX_VALUE)) {
             var pot = pot(helper);
-            int amount = GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
+            int amount = GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
             helper.assertTrue(amount == Integer.MAX_VALUE, "Equal maximum bounds must produce the exact maximum");
-            helper.assertTrue(GROWTH.apply(pot, amount), "Maximum configured growth must apply");
+            helper.assertTrue(GrowthTestSupport.apply(GROWTH, pot, amount), "Maximum configured growth must apply");
             helper.assertTrue(pot.growthTime() == pot.getRequiredGrowthTicks(),
                     "Maximum configured growth must reach maturity without overflow");
         }
@@ -189,7 +189,7 @@ public final class BonemealGrowthGameTests {
             boolean minimum = false;
             boolean maximum = false;
             for (int sample = 0; sample < 64; sample++) {
-                int amount = GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
+                int amount = GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
                 helper.assertTrue(amount == 7 || amount == 8, "Samples must stay inside configured bounds");
                 minimum |= amount == 7;
                 maximum |= amount == 8;
@@ -204,7 +204,7 @@ public final class BonemealGrowthGameTests {
         try (var ignored = new GrowthConfigFixture(1, Integer.MAX_VALUE)) {
             var pot = pot(helper);
             for (int sample = 0; sample < 16; sample++) {
-                helper.assertTrue(GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0,
+                helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) > 0,
                         "Inclusive range width must not overflow at Integer.MAX_VALUE");
             }
         }
@@ -216,7 +216,7 @@ public final class BonemealGrowthGameTests {
         var original = io.github.gaiusred.sourcepots.config.SourcePotsConfig.snapshot();
         boolean caught = false;
         try (var ignored = new GrowthConfigFixture(23, 23)) {
-            helper.assertTrue(GROWTH.growthAmount(pot(helper), helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 23,
+            helper.assertTrue(GrowthTestSupport.growthAmount(GROWTH, pot(helper), helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR) == 23,
                     "Temporary configured range must take effect");
             throw new AssertionError("Deliberate fixture assertion failure");
         } catch (AssertionError expected) {
@@ -228,7 +228,7 @@ public final class BonemealGrowthGameTests {
     }
 
     private static void assertNoSpend(GameTestHelper helper, BotanyPotBlockEntity pot) {
-        int amount = GROWTH.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
+        int amount = GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
         helper.assertTrue(amount == 0, "Missing, unsupported, or nonpositive recipe must return zero, got " + amount);
         int[] balance = {1000};
         SourceAccess access = new SourceAccess() {
@@ -237,7 +237,7 @@ public final class BonemealGrowthGameTests {
         };
         helper.assertTrue(new SourceScheduler().tick(new SourceState(), SourceSettings.defaults(), amount > 0, access) == null, "Ineligible growth must not authorize boost");
         helper.assertTrue(balance[0] == 1000 && pot.growthTime() == 0, "Ineligible recipe must preserve Source and growth");
-        helper.assertTrue(!GROWTH.apply(pot, amount), "Zero growth must not apply");
+        helper.assertTrue(!GrowthTestSupport.apply(GROWTH, pot, amount), "Zero growth must not apply");
     }
 
     static BotanyPotBlockEntity pot(GameTestHelper helper) {

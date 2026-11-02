@@ -21,7 +21,6 @@ class PotVariantsTest {
             var json = JsonParser.parseString(Files.readString(root.resolve("models/block/" + variant.basePath() + ".json"))).getAsJsonObject();
             var textures = json.getAsJsonObject("textures");
             assertEquals(textures.get("material").getAsString(), variant.material().toString());
-            assertEquals(textures.get("material_top").getAsString(), variant.materialTop().toString());
         }
         assertEquals(states, actual, "Every pinned hopper pot must have exactly one upgrade");
     }

@@ -21,28 +21,46 @@ repositories {
     }
 }
 
+sourceSets {
+    gametest {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
+}
+configurations.gametestImplementation.extendsFrom configurations.implementation
+configurations.gametestRuntimeOnly.extendsFrom configurations.runtimeOnly
+
 neoForge {
     version = neo_version
+    addModdingDependenciesTo(sourceSets.gametest)
+    mods {
+        sourcepots { sourceSet sourceSets.main }
+        sourcepots_gametest { sourceSet sourceSets.gametest }
+    }
     runs {
-        client { client() }
+        client {
+            client()
+            loadedMods = [mods.sourcepots]
+        }
         server {
             server()
+            loadedMods = [mods.sourcepots]
             programArgument '--nogui'
         }
         gameTestServer {
             type = 'gameTestServer'
+            sourceSet = sourceSets.gametest
+            loadedMods = [mods.sourcepots, mods.sourcepots_gametest]
             gameDirectory = file('run/gametest')
             systemProperty 'neoforge.enabledGameTestNamespaces', 'sourcepots'
         }
         data {
             data()
+            loadedMods = [mods.sourcepots]
             systemProperty 'sourcepots.datagen', 'true'
             programArguments.addAll '--mod', mod_id, '--all', '--output', file('src/generated/resources').absolutePath,
                     '--existing', file('src/main/resources').absolutePath
         }
-    }
-    mods {
-        sourcepots { sourceSet sourceSets.main }
     }
 }
 

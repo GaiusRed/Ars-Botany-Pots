@@ -4,6 +4,8 @@
 
 ## Live progress
 
+- Task 14: cleanup and verification complete. Implementation checkpoint `0bad75f` is committed. All 81 GameTests and 29 unit tests are retained in a development-only test mod; production jars exclude test code. The clean build and data/package/isolation checks pass. README and display name use **Ars Botany Pots**, while `sourcepots` save/registry identity and gameplay remain unchanged. Cleanup commit and GitHub PR delivery are prepared; GitHub is the delivery record.
+
 - Task 13 amendment: complete and independently reviewed. Growth ranges are Jar 600–800, liquid 500–700 and gas 400–600; gas costs 250 units. Defaults and the backed-up/migrated dev config match all 15 settings. Final gate passes 81 GameTests, 29 unit tests and build in 49 seconds. Updated client PID 26924 reached Singleplayer, responding; JEI initialized at 04:36:36. Ready for user testing.
 
 - Design and implementation plan: approved.
@@ -258,12 +260,12 @@ Use independent configurable `growthMinTicks` and `growthMaxTicks` under each ex
 
 The user explicitly authorizes two commits on the existing feature branch, pushing that branch and opening a GitHub PR for approval. First checkpoint all implemented work, then clean and verify the repository before the second commit. Do not merge the PR or change the mod ID, registered content, recipes, resource pins or gameplay behavior.
 
-- [ ] Run the current tests/build, verify staged contents exclude ignored local data, and commit the implemented mod as a checkpoint.
-- [ ] Reread and apply `clean-code-principles`. Audit production code, test fixtures, diagnostics, build/runtime packaging and ignored/tracked files. Remove only demonstrably unused or redundant code/tests; retain independent coverage of scheduling, resource economics, native harvesting, overflow, persistence, mode-specific growth and six-face behavior. Keep required diagnostics and development compatibility hooks unless evidence establishes they are unnecessary.
-- [ ] Apply focused cleanup and ignore rules without deleting user worlds, local configs or useful development artifacts. Preserve reference submodules and generated runtime resources. Keep test-only machinery out of production packaging where the pinned loader supports a verified separation.
-- [ ] Rewrite README as **Ars Botany Pots**, with a minimal feature description, required dependencies, generic recipe and current defaults. Align the mod's display name; retain `sourcepots` registry/save identity.
-- [ ] Run appropriate tests, data/package checks and independent code/prose review. Record retained coverage and any test removals with reasons.
-- [ ] Update this plan with verified cleanup results, prepare the second commit and PR description, and leave the branch ready for delivery.
+- [x] Run the current tests/build, verify staged contents exclude ignored local data, and commit the implemented mod as a checkpoint. Verified 81 GameTests, 29 unit tests and build; checkpoint `0bad75f` preserves 352 changed files. Ignored/local artifacts were excluded. Four existing whitespace findings are deferred to the cleanup commit.
+- [x] Reread and apply `clean-code-principles`. Audit production code, test fixtures, diagnostics, build/runtime packaging and ignored/tracked files. Remove only demonstrably unused or redundant code/tests; retain independent coverage of scheduling, resource economics, native harvesting, overflow, persistence, mode-specific growth and six-face behavior. Keep required diagnostics and development compatibility hooks unless evidence establishes they are unnecessary.
+- [x] Apply focused cleanup and ignore rules without deleting user worlds, local configs or useful development artifacts. Preserve reference submodules and generated runtime resources. Keep test-only machinery out of production packaging where the pinned loader supports a verified separation.
+- [x] Rewrite README as **Ars Botany Pots**, with a minimal feature description, required dependencies, generic recipe and current defaults. Align the mod's display name; retain `sourcepots` registry/save identity.
+- [x] Run appropriate tests, data/package checks and independent code/prose review. Record retained coverage and any test removals with reasons.
+- [x] Update this plan with verified cleanup results, prepare the second commit and PR description, and leave the branch ready for delivery.
 
 Delivery after the cleanup commit: push `feature/source-powered-pots`, use `gh` to open a PR against `main`, and return its link for user approval. GitHub is the delivery record; do not merge. Preserve the checkout for review changes.
 
@@ -273,4 +275,4 @@ Coverage: configuration and defaults (Task 1), timing/priority (Task 2), fertili
 
 Clean-code checks: one scheduling policy shared by every variant; one variant map for registration and data; dedicated growth/resource adapters; upstream hopper behavior reused; minimal entry-point wiring; no fake players, copied hopper implementation, or general-purpose fuel framework.
 
-The user approved this plan and requested subagent execution. Implementation started on 2026-11-03 with subagent tools available. Keep this file current as implementation and verification progress. This task does not authorize commits or pushes.
+The user approved this plan and requested subagent execution. Task 14 explicitly authorizes the implementation checkpoint, a cleanup commit, pushing the feature branch and opening a PR for approval. It does not authorize merging the PR. Keep the checkout available for review changes.

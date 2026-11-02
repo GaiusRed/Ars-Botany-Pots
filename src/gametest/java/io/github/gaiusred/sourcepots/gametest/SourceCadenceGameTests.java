@@ -85,8 +85,7 @@ public final class SourceCadenceGameTests {
             h.assertTrue(singleIntake==spent+buffered && multipleIntake==spent+buffered,
                     "One and six suppliers must fund the same exact payments, allowing one retained liquid operation");
             h.assertTrue(stored(one,gas)==buffered && stored(six,gas)==buffered,"Intake retained in storage is not an extra boost");
-            com.mojang.logging.LogUtils.getLogger().info("Task 10 {} one/six suppliers: 20 natural ticks, growth {}, spent {}, buffered {}, intake {}",
-                    gas?"gas":"liquid",one.growthTime(),spent,buffered,singleIntake);
+
         } finally {
             for(var entry:single) ResourceTestEnvironment.remove(h,entry.position());
             for(var entry:multiple) ResourceTestEnvironment.remove(h,entry.position());

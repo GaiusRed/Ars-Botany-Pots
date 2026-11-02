@@ -181,7 +181,7 @@ The launcher investigation found that the additional legacy classpath caused JEI
 
 The fresh launch at 03:52 lists JEI 19.64.0.455 and MezzConfig 0.6.6 in FML's discovered mods (`task-11-client.log`). Windows reported PID 25612, title `Minecraft NeoForge* 1.21.1 - Singleplayer`, responding. JEI logged `Starting JEI...` at 03:52:48, `Starting JEI GUI` at 03:52:50, and successful completion in 2.515 seconds at 03:52:51. These logs verify actual discovery and runtime initialization. No direct GUI inspection or user filtering result is claimed. At that Task 11 launch, the development config gained `growth.minTicks=600` and `growth.maxTicks=1200`; its existing liquid/gas intervals stayed 10/5. No saved interval was overwritten at that checkpoint. The separately authorized Task 12 config update is recorded above.
 
-For the user's mod-name search, try JEI `@integration`, which matches the display name `Botany Pots - StarbuncleMania Integration`. The mod ID is `sourcepots`; this record does not assume JEI's name filter accepts that raw ID.
+Manual verification of JEI search/filtering by the display name `Ars Botany Pots` remains pending. The mod ID remains `sourcepots`. Historical launch records below retain the names used at those checkpoints.
 
 ## Log findings
 
@@ -205,10 +205,10 @@ Use a new local creative world. Preserve existing worlds. Record the tested vari
 
 - [ ] Craft terracotta, one dyed, and one glazed Ars Hopper Botany Pot. Use matching upstream hopper pot `C`, two gold nuggets `A`, and five archwood planks `B`, arranged `A A / BCB / BBB`. Confirm one matching `sourcepots` pot results.
 - [ ] Inspect the gold rim in inventory and on placed pots in every facing direction. Record the user's appearance judgment.
-- [ ] Confirm all 61 Ars pots appear in the separate Ars Botany Pots Creative category and Creative search; confirm the original Botany Pots category keeps its upstream entries. Startup versions and JEI initialization are verified above. Test JEI `@integration` plus recipe lookup.
+- [ ] Confirm all 61 Ars pots appear in the separate Ars Botany Pots Creative category and Creative search; confirm the original Botany Pots category keeps its upstream entries. Startup versions and JEI initialization are verified above. Test JEI search/filtering by the display name `Ars Botany Pots` plus recipe lookup.
 - [ ] Insert valid soil, wheat seeds, and a supported tree sapling. Check soil/crop/tree rendering, menu, harvest tool, all 15 inventory slots (soil, seed, tool, and 12 output/storage slots), hopper export, comparator, and waterlogging.
 - [ ] Compare empty-input growth and harvesting against an ordinary Hopper Botany Pot.
-- [ ] Test Jar-only input with a real Ars Source Jar: default 2,500 Source payment every 80 eligible ticks, 100-tick paid window, boosts every 10 ticks, radius 3 including diagonal positions; growth 600–800 ticks per boost. Confirm visible effects and behavior just beyond range.
+- [ ] Test Jar-only input with a real Ars Source Jar: default 2,500 Source per payment, payment attempts have an 80-tick cooldown, 100-tick paid window, boosts every 10 ticks, radius 3 including diagonal positions; growth 600–800 ticks per boost. Confirm visible effects and behavior just beyond range.
 - [ ] Test liquid-only input with a real container and pipe using `sauce:source_fluid`: 500 mB per boost, 5-tick cadence, growth 500–700 ticks per boost, input-only buffer limited to one configured operation.
 - [ ] Test gas-only input with Mekanism storage and pipes using `starbunclemania:source_gas`: 250 units per boost, 1-tick cadence, growth 400–600 ticks per boost, separate input-only buffer limited to one configured operation.
 - [ ] Test both buffers and a Jar together. Confirm default gas/liquid/Jar priority, one boost at a time, six-face liquid/gas connections, and no diagonal pipe connection.
@@ -228,3 +228,21 @@ No separate backed-up ATM10Aero 0.8.0 instance path or permission to alter a pac
 - [ ] Record startup logs, resource errors, save/reopen results, player permissions, and any compatibility failures.
 
 Full-pack compatibility remains unverified.
+
+
+## Task 14: cleanup and development test isolation
+
+The cleanup gate ran with Java 21: `clean test runGameTestServer build prepareClientRun prepareServerRun prepareDataRun`, plus a read-only Gradle classpath audit. It exited 0 in 56 seconds. All 81 required GameTests passed; JUnit XML records 29 tests with no failures, errors, or skips. Evidence is retained locally in `scratch/task-14-cleanup-final-gate.log` and `scratch/task-14-cleanup-artifact-report.txt`.
+
+All GameTests and fixtures now compile in `src/gametest`, with a separate development test mod. Client, server, and data runs load only `sourcepots` and have no GameTest source-set runtime paths. The GameTest run loads `sourcepots` and `sourcepots_gametest`; its compile classpath includes main output, the pinned NeoForge artifact, and production dependencies. CI runs the unit suite, native GameTests, and build.
+
+All 81 GameTest cases and 29 unit cases remain. Removed only the unused top-texture metadata assertion, two production convenience methods used exclusively by tests (their orchestration now lives in test support), and temporary Task 10 success logs/loot serialization. Actual generated resource and orientation checks remain. Scheduler, ticker, resource adapters, settings/configuration, and the guarded datagen compatibility hook are unchanged from checkpoint `0bad75f`.
+
+`runData` passed before the clean gate, including the pinned StarbuncleMania compatibility hook. Every one of the 310 generated JSON files was byte-identical to the checkpoint afterward. Both final jars contain all 310 JSON files and no GameTest classes, fixtures, test-mod metadata, cache files, or development tools.
+
+| Artifact | Bytes | SHA-256 |
+| --- | --- | --- |
+| `sourcepots-0.1.0-dev.jar` | 167,345 | `3287061324d59959f207c6434f8387b1cb4b3341c8fc74e0fbfeac19a0003af8` |
+| `sourcepots-0.1.0-dev-sources.jar` | 136,266 | `55c89898e482f02d3b77ca9eab30c2ce66edc55fa67f370b1ea30fdcd1bb7b9e` |
+
+The display name is now **Ars Botany Pots**. Registry/save identity remains `sourcepots`; the dependency file pins and upstream references are unchanged. No client was launched for this cleanup. Existing manual gameplay and full-pack checks remain open.

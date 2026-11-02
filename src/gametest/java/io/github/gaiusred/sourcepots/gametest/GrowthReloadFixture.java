@@ -162,9 +162,9 @@ final class GrowthReloadFixture {
         GrowthTestEnvironment.createTemplate(helper.getLevel());
         pot.reset();
         pot.updateGrowthTime(0);
-        int amount = growth.growthAmount(pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
+        int amount = GrowthTestSupport.growthAmount(growth, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
         helper.assertTrue(amount == expected, "Real reload must acquire amount " + expected + ", got " + amount);
-        helper.assertTrue(growth.apply(pot, amount) == (expected > 0), "Reloaded eligibility must control growth application");
+        helper.assertTrue(GrowthTestSupport.apply(growth, pot, amount) == (expected > 0), "Reloaded eligibility must control growth application");
         helper.assertTrue(pot.growthTime() == expected, "Reloaded delta must equal " + expected);
     }
 

@@ -224,7 +224,7 @@ public final class PotDataGameTests {
                 h.assertTrue(empty.getLong(key) == 0, "Replacement must start without power: " + key);
             }
             h.succeed();
-        
+
         }
     }
 
@@ -240,5 +240,3 @@ public final class PotDataGameTests {
     }
     private PotDataGameTests() {}
 }
-
-

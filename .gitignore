@@ -10,3 +10,9 @@ logs/
 .vscode/
 .DS_Store
 src/generated/resources/.cache/
+.superpowers/
+crash-reports/
+*.log
+hs_err_pid*.log
+replay_pid*.log
+scratch/

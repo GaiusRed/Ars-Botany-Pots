@@ -9,8 +9,8 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="GaiusRed"
 description='''
-Adds 61 Ars Hopper Botany Pots for ATM10 Aeronautics, powered by Ars Source,
-Liquid Source, or Gaseous Source while retaining ordinary hopper pot behavior.
+Adds 61 gold-rimmed Hopper Botany Pot upgrades powered by Ars Source,
+Liquid Source, or Gaseous Source. Unused paid growth carries into later harvests.
 '''
 
 [[dependencies.${mod_id}]]

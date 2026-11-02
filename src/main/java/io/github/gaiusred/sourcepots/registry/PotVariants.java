@@ -6,7 +6,7 @@ import java.util.Comparator;
 import net.minecraft.resources.ResourceLocation;
 
 public final class PotVariants {
-    public record PotVariant(String basePath, ResourceLocation originalItem, ResourceLocation material, ResourceLocation materialTop) {}
+    public record PotVariant(String basePath, ResourceLocation originalItem, ResourceLocation material) {}
     public static final List<PotVariant> ALL = variants();
     private static List<PotVariant> variants() {
         var materials = new ArrayList<String>();
@@ -19,8 +19,7 @@ public final class PotVariants {
                 "prismarine_bricks", "nether_bricks", "red_nether_bricks", "polished_blackstone_bricks", "end_stone_bricks", "quartz_bricks"));
         return materials.stream().map(base -> new PotVariant(base + "_hopper_botany_pot",
                         ResourceLocation.fromNamespaceAndPath("botanypots", base + "_hopper_botany_pot"),
-                        ResourceLocation.fromNamespaceAndPath("minecraft", "block/" + base),
-                        ResourceLocation.fromNamespaceAndPath("botanypots", "block/" + base + "_pot_top")))
+                        ResourceLocation.fromNamespaceAndPath("minecraft", "block/" + base)))
                 .sorted(Comparator.comparing(PotVariant::basePath)).toList();
     }
     private PotVariants() {}

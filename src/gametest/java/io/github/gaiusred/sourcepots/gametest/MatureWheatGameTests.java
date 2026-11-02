@@ -1,7 +1,5 @@
 package io.github.gaiusred.sourcepots.gametest;
 
-import com.mojang.logging.LogUtils;
-import com.mojang.serialization.JsonOps;
 import java.util.List;
 import mekanism.api.Action;
 import net.darkhax.botanypots.common.impl.Helpers;
@@ -12,7 +10,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.gametest.framework.GameTest;
 import net.minecraft.gametest.framework.GameTestHelper;
-import net.minecraft.resources.RegistryOps;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -49,8 +46,6 @@ public final class MatureWheatGameTests {
                 "Loaded recipe must use age-seven wheat and its actual loaded loot table, without fallback");
         var table=h.getLevel().getServer().reloadableRegistries().getLootTable(Blocks.WHEAT.getLootTable());
         h.assertTrue(table!=LootTable.EMPTY,"Actual mature-wheat loot table must be loaded");
-        var encoded=LootTable.DIRECT_CODEC.encodeStart(RegistryOps.create(JsonOps.INSTANCE,h.getLevel().registryAccess()),table).getOrThrow();
-        LogUtils.getLogger().info("Task 10 loaded mature-wheat loot: {}",encoded);
         for(var pot:List.of(ars,hopper,basic)) {
             h.assertTrue(pot.getHarvestItem().isEmpty() && pot.getSoilItem().is(Items.DIRT),"Parity uses dirt soil and no harvest tool");
             h.assertTrue(Helpers.getTotalYield(pot.getRecipeContext(),h.getLevel(),pot.getOrInvalidateCrop(),pot.getOrInvalidateSoil())==1,
@@ -82,7 +77,6 @@ public final class MatureWheatGameTests {
             for(var pot:List.of(ars,hopper,basic)) {
                 h.assertTrue(pot.growthTime()==-1 && pot.getSeedItem().getCount()==1,"Each harvest resets upstream growth to minus one and retains the planted seed");
             }
-            LogUtils.getLogger().info("Task 10 mature wheat seed {}: Ars/hopper/basic manual = {} wheat, {} seeds",seed,reference.wheat(),reference.seeds());
         }
         h.succeed();
     }

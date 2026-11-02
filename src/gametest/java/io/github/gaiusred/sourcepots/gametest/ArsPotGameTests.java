@@ -81,7 +81,7 @@ public final class ArsPotGameTests {
             restored.setSeed(ItemStack.EMPTY);
             var inactive=restored.saveWithoutMetadata(h.getLevel().registryAccess()); restored.loadAdditional(inactive,h.getLevel().registryAccess());
             h.assertTrue(restored.sourceAccess().chemicalHandler().getChemicalInTank(0).getAmount()==250,"Ineligible crops must not discard saved power"); h.succeed();
-        
+
         }
     }
 
