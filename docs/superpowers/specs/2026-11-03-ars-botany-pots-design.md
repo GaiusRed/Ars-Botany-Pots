@@ -1,6 +1,6 @@
 # Ars Botany Pots design
 
-Status: Approved by the user on 2026-11-03. Implementation planning requested; product code has not started.
+Status: Approved by the user on 2026-11-03. Implemented with 81 GameTests and 29 unit tests passing; development launch checks recorded. User confirmed appearance and operation with all three Source inputs. JEI initialization is verified. Detailed manual scenarios, Creative/JEI visibility confirmation, and full-pack acceptance remain pending; see `docs/verification/ars-botany-pots.md`.
 
 ## Intent
 
@@ -33,9 +33,9 @@ No upstream source edits or global mixins are planned. If inspection during impl
 
 | Mode | Cost | Payment interval | Growth boost interval | Powered duration |
 | --- | --- | --- | --- | --- |
-| Ars Source | 2,000 Source, equal to 20% of a standard 10,000-capacity Jar | 80 ticks | 20 ticks | Each successful payment resets remaining duration to 100 ticks |
-| Liquid Source | 250 mB | 10 ticks | 10 ticks, with payment | One operation |
-| Gaseous Source | 125 chemical units, described as 125 mB in the request | 5 ticks | 5 ticks, with payment | One operation |
+| Ars Source | 2,500 Source, equal to 25% of a standard 10,000-capacity Jar | 80 ticks | 10 ticks | Each successful payment resets remaining duration to 100 ticks |
+| Liquid Source | 500 mB | 5 ticks | 5 ticks, with payment | One operation |
+| Gaseous Source | 250 native chemical units | 1 tick | 1 tick, with payment | One operation |
 
 Use Mekanism's native chemical quantity API for gas; do not model it as a fluid.
 
@@ -47,7 +47,7 @@ The pinned recipe `upstream/BotanyPots/common/src/main/resources/data/botanypots
 
 `BasicFertilizer.apply()` caps growth at `requiredGrowthTicks - 20` and only applies when required growth exceeds 20 ticks. At that cap it consumes no fertilizer. Natural growth completes the final ticks; `BotanyPotBlockEntity.tickPot()` harvests eligible hopper crops and resets growth for the next cycle.
 
-Source boosts must follow that growth amount and cap. They do not spawn or bonemeal world-placed crop blocks and do not consume bonemeal items. No Source payment occurs if a boost cannot add growth, or if crop and soil are absent or incompatible.
+Source boosts use independent configurable inclusive ranges: Jar 600–800, liquid 500–700 and gas 400–600 growth ticks. Sample only the mode authorized by the scheduler; retained paid growth keeps its value when modes change. Task 12 removes the Source finishing cap: paid growth may reach maturity, including for crops needing at most 20 ticks. Retain exact unused paid growth for later cycles. The matching supported recipe must still report positive growth. Manual bonemeal keeps its recipe amount and cap. Source boosts do not spawn or bonemeal world-placed crop blocks and do not consume bonemeal items. No Source payment occurs when growth cannot advance, crop/soil are incompatible, the harvest is blocked, or retained growth already suffices.
 
 Source scheduling must remain independent of the upstream fertilizer cooldown, whose default is 20 ticks. Normal player-applied fertilizer keeps its existing recipe, effects, item consumption, and cooldown. Source and ordinary fertilizer can both contribute growth; do not add an unrequested multiplier to existing fertilizer recipes.
 
@@ -67,7 +67,7 @@ Only the six face-adjacent blocks qualify. Diagonal blocks do not.
 - Actively pull from adjacent handlers that permit extraction on the face touching the pot.
 - Accept only the matching existing Source resource. Respect sided access and extraction restrictions.
 - Keep separate liquid and gas buffers. They coexist.
-- Liquid capacity equals one configured liquid payment; gas capacity equals one configured gas payment. Defaults are 250 mB and 125 chemical units.
+- Liquid capacity equals one configured liquid payment; gas capacity equals one configured gas payment. Defaults are 500 mB and 250 chemical units.
 - Partial fills can accumulate up to one payment. A boost requires a full payment; never charge for a partial operation.
 - Stored liquid remains when gas takes priority.
 
@@ -77,17 +77,17 @@ These settle cases not explicitly decided in conversation. They are implementati
 
 ### Scheduling and switching
 
-Run the upstream ordinary pot tick once per server tick, then process Source growth. A Source boost reaching the cap leaves upstream ticking to finish maturation and harvest.
+Run the upstream ordinary pot tick once per server tick, then process Source growth. Source may reach maturity now; the next native tick harvests, at most once per server tick. Keep all native harvest, loot, yield, tool, export and comparator hooks. Clear the native five-tick growth cooldown only after a Source-assisted harvest. Ordinary and manual-only cycles keep native timing. Apply retained credit before a new boost; only buy when the bank is exhausted and the crop still needs growth. Do not loop the upstream ticker or copy its harvest implementation. Its post-harvest reset is -1; retained credit pays that first restart tick as well as the remaining growth to maturity.
 
 Use one shared boost cooldown to prevent gas, liquid, and Jar boosts stacking on the same tick. Choose the fastest fully funded mode by its configured boost interval; defaults give gas, liquid, then Jar priority. Break equal-interval ties in that same order. After a boost, set the next eligible boost interval to that mode's configured interval. Switching modes does not erase an existing cooldown; once it expires, select the fastest currently funded input. Before buying Jar power, try eligible adjacent input handlers so a pullable faster input is not overlooked.
 
-On initial activation, the first eligible payment can apply its first boost immediately. Under uninterrupted operation the intervals in the table apply. For Jar power, the purchase tick counts as the first of five possible boosts in a 100-tick window, at offsets 0, 20, 40, 60, and 80 if growth remains eligible. A renewal at tick 80 resets the window without creating a second boost on that tick.
+On initial activation, the first eligible payment can apply its first boost immediately. Under uninterrupted operation the intervals in the table apply. For Jar power, the purchase tick counts as the first of ten possible boosts in a 100-tick window, at offsets 0, 10, 20, 30, 40, 50, 60, 70, 80, and 90 if growth remains eligible. A renewal at tick 80 resets the window without creating a second boost on that tick.
 
 While liquid or gas funds the selected mode, do not renew Jar power or apply Jar boosts. Previously paid Jar time still counts down. When faster inputs become unavailable, remaining paid Jar power can resume; otherwise attempt a Jar payment when its payment cooldown permits.
 
 Keep payment/boost cooldowns as per-pot counters, not global world-time phases. Jar payment cooldown is at least 80 ticks between successful payments. When a payment fails, retry at the configured payment interval rather than scanning the full neighborhood every tick.
 
-Paid Jar duration elapses during loaded ticks even when growth is invalid, capped, or using another mode. No refunds. Keep at most one mode's boost per tick.
+Paid Jar duration elapses during loaded ticks even when growth is invalid, mature, bank-funded, or using another mode. No refunds. Keep at most one mode's boost per tick.
 
 ### Idle intake and persistence
 
@@ -99,9 +99,9 @@ Expose buffers as input-only to automation. Source used by this upgrade is not a
 
 ### Fertilizer recipe behavior
 
-Use the active bonemeal recipe's growth amount for the current crop/soil so pack data changes are respected, rather than permanently hardcoding 400–600. Retain the upstream 20-tick finishing cap. If no applicable bonemeal recipe exists, disable Source boosts without spending resources.
+Use the active supported bonemeal recipe to determine crop/soil eligibility and require positive recipe growth. Use `growthMinTicks` and `growthMaxTicks` under each existing `[jar]`, `[liquid]` and `[gas]` table for that mode’s inclusive Source amount. The former shared `[growth]` keys are replaced and no longer control growth. Recipe reloads can disable or re-enable eligibility but do not override configured Source growth. Validate every mode’s configured bounds and evaluate recipe eligibility once before payment; sample the authorized mode’s bounds after payment and do not reroll recipe growth after paying. Keep the twenty-tick cap for manual bonemeal only. If no applicable bonemeal recipe exists, disable Source boosts without spending resources or applying retained credit. Save finite, nonnegative growth credit bounded by one maximum configured integer boost, along with the Source-assisted cycle flag. Crop/soil resets discard both; existing power buffers and timers keep their prior semantics. Loading never awards time for unloaded ticks.
 
-Do not call `BasicFertilizer.apply()` with a null or fake player: the pinned implementation dereferences the player for item consumption. Reuse the recipe's growth calculation in a server-side adapter without modifying the player fertilizer cooldown or consuming items. The initial implementation supports the pinned basic bonemeal recipe; an unsupported custom fertilizer implementation disables boosting with a bounded diagnostic rather than guessed behavior.
+Do not call `BasicFertilizer.apply()` with a null or fake player: the pinned implementation dereferences the player for item consumption. Check the recipe's positive growth in a server-side adapter, then sample configured Source growth without modifying the player fertilizer cooldown or consuming items. The initial implementation supports the pinned basic bonemeal recipe; an unsupported custom fertilizer implementation disables boosting with a bounded diagnostic rather than guessed behavior.
 
 ### Variants and crafting
 
@@ -138,21 +138,29 @@ The exact class/file split is left to implementation. Keep abstractions limited 
 
 ## Configuration
 
-Use server-controlled NeoForge configuration with descriptions and positive-value validation. Proposed keys/defaults:
+Use server-controlled NeoForge configuration with descriptions and positive-value validation. The instance `config/sourcepots-server.toml` is used unless an existing world `serverconfig/sourcepots-server.toml` overrides it. Growth bounds must be positive and ordered; equal bounds are allowed and yield constant growth. Current keys/defaults:
 
 | Key | Default |
 | --- | --- |
-| `jar.sourceCost` | 2000 |
+| `jar.sourceCost` | 2500 |
 | `jar.paymentIntervalTicks` | 80 |
 | `jar.poweredDurationTicks` | 100 |
-| `jar.boostIntervalTicks` | 20 |
+| `jar.boostIntervalTicks` | 10 |
 | `jar.searchRange` | 3 |
-| `liquid.costMb` | 250 |
-| `liquid.boostIntervalTicks` | 10 |
-| `gas.costUnits` | 125 |
-| `gas.boostIntervalTicks` | 5 |
+| `liquid.costMb` | 500 |
+| `liquid.boostIntervalTicks` | 5 |
+| `gas.costUnits` | 250 |
+| `gas.boostIntervalTicks` | 1 |
+| `jar.growthMinTicks` | 600 |
+| `jar.growthMaxTicks` | 800 |
+| `liquid.growthMinTicks` | 500 |
+| `liquid.growthMaxTicks` | 700 |
+| `gas.growthMinTicks` | 400 |
+| `gas.growthMaxTicks` | 600 |
 
 The percentage describes the default cost relative to a standard jar, not a percentage of its current contents or of whichever provider is found. Buffer capacities derive from the configured costs. Initially require a world/server restart for configuration changes, avoiding live buffer truncation. On loading stored amounts above a reduced capacity, clamp to capacity and issue a bounded diagnostic.
+
+The historical Task 10 change set liquid/gas intervals to 5/1. Task 12 set Jar cost to 2500, Jar boost interval to 10 and gas cost to 100 chemical units. Existing saved configurations retain explicit values; change the corresponding keys in the configuration above and restart the world or server to adopt current defaults. The Task 13 amendment sets liquid cost to 500 mB, gas cost to 250 units and the per-mode growth bounds above. Liquid needs 2000 mB (two buckets) and gas needs 5000 chemical units (five 1000-unit buckets) per 20 ticks when a boost is due each interval and no retained credit suffices.
 
 ## Verification and acceptance
 
@@ -161,7 +169,8 @@ Automated scheduler/growth tests must cover:
 - Every mode's payment and boost cadence, first operation, and one boost per tick.
 - Jar renewal resets to 100 rather than adding time; failed payment does not erase paid time.
 - Faster-mode selection, switching with a shared cooldown, and fallback to existing Jar power.
-- No resources spent for invalid crop/soil, growth capped within 20 ticks of maturity, or crops whose required growth is at most 20 ticks.
+- No resources spent for invalid crop/soil, unsupported/nonpositive fertilizer, a mature or blocked crop, or a sufficient retained growth bank.
+- Exact overflow survives saves; crop/soil reset and break discard it. Very large boosts produce at most one native harvest each server tick without repeated payment. Short crops are eligible.
 - Independent ordinary fertilizer use and Source scheduling; valid crop-dependent bonemeal growth and recipe reload handling.
 - Separate one-operation buffers, partial fills, wrong resource rejection, full-buffer backpressure, and exact payment amounts.
 - Configured costs/intervals, persistence, unload/reload, and no break/place duplication.
@@ -175,3 +184,6 @@ Run a Java 21 build and bounded development-server smoke test. Launch `gradlew.b
 ## Approval and next step
 
 The user approved the spec, including its proposed defaults, and requested the implementation plan. Write that plan before product code. Do not create commits without explicit consent for that action.
+
+
+Task 11 gives the 61 mapped Ars pots their own Creative category, `sourcepots:ars_botany_pots`, titled **Ars Botany Pots**, with the Ars terracotta pot icon. All 61 appear in its parent and search contents; the original Botany Pots category retains its upstream contents. This supersedes Task 9's shared-category decision. Missing mode-specific growth keys receive the defaults above on the next config load without rewriting existing resource settings. Old shared growth keys no longer control boosts. Growth changes require a world/server restart. At the historical Task 11 checkpoint, the natural finishing phase and upstream harvest timing remained. Task 12 supersedes those Source cap and pause requirements as described above.

@@ -61,6 +61,20 @@
       "sha256": "20a1995e4074f387ff549e2c57ea79dd7d41ee83c6afb9dd6a6e840e592d1c47"
     }
   ],
+  "development_tools": [
+    {
+      "mod_id": "jei", "project_id": 238222, "file_id": 9205121,
+      "version": "19.64.0.455",
+      "filename": "jei-1.21.1-neoforge-19.64.0.455.jar",
+      "sha256": "f7a9de3d7ee07eed8d293a1a1a0f6afaac556eb43c103523457bd07ebb551e7b",
+      "scope": "development client JVM classpath only; excluded from bootstrap legacy classpath",
+      "manifest_path": "files[projectID=238222,fileID=9205121]",
+      "manifest_sha256": "f807b62e08f3c055a41419f2d015ddb456a77a15705ba006615fa55ef1039fe9",
+      "release_url": "https://www.curseforge.com/minecraft/mc-mods/jei/files/9205121",
+      "artifact_url": "https://mediafilez.forgecdn.net/files/9205/121/jei-1.21.1-neoforge-19.64.0.455.jar",
+      "bundled_mod_libraries": { "mezz_config": "0.6.6" }
+    }
+  ],
   "bundled_mod_libraries": {
     "ars_nouveau": {
       "nuggets": "1.1.0.48",

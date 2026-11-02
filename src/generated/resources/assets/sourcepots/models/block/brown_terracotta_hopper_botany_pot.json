@@ -1,0 +1,19 @@
+{
+  "parent": "minecraft:block/block",
+  "children": {
+    "body": {
+      "parent": "botanypots:block/brown_terracotta_hopper_botany_pot"
+    },
+    "rim": {
+      "parent": "sourcepots:block/template/gold_rim"
+    }
+  },
+  "item_render_order": [
+    "body",
+    "rim"
+  ],
+  "loader": "neoforge:composite",
+  "textures": {
+    "particle": "minecraft:block/brown_terracotta"
+  }
+}

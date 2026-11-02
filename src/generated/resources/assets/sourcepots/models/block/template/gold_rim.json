@@ -1,0 +1,102 @@
+{
+  "parent": "minecraft:block/block",
+  "elements": [
+    {
+      "faces": {
+        "up": {
+          "texture": "#gold",
+          "uv": [
+            2,
+            2,
+            14,
+            3
+          ]
+        }
+      },
+      "from": [
+        2,
+        8.125,
+        2
+      ],
+      "to": [
+        14,
+        8.125,
+        3
+      ]
+    },
+    {
+      "faces": {
+        "up": {
+          "texture": "#gold",
+          "uv": [
+            2,
+            13,
+            14,
+            14
+          ]
+        }
+      },
+      "from": [
+        2,
+        8.125,
+        13
+      ],
+      "to": [
+        14,
+        8.125,
+        14
+      ]
+    },
+    {
+      "faces": {
+        "up": {
+          "texture": "#gold",
+          "uv": [
+            2,
+            3,
+            3,
+            13
+          ]
+        }
+      },
+      "from": [
+        2,
+        8.125,
+        3
+      ],
+      "to": [
+        3,
+        8.125,
+        13
+      ]
+    },
+    {
+      "faces": {
+        "up": {
+          "texture": "#gold",
+          "uv": [
+            13,
+            3,
+            14,
+            13
+          ]
+        }
+      },
+      "from": [
+        13,
+        8.125,
+        3
+      ],
+      "to": [
+        14,
+        8.125,
+        13
+      ]
+    }
+  ],
+  "render_type": "minecraft:cutout",
+  "textures": {
+    "gold": "minecraft:block/gold_block",
+    "particle": "minecraft:block/gold_block"
+  }
+}

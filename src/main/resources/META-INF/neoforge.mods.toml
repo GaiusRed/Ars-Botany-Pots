@@ -9,8 +9,8 @@ version="${mod_version}"
 displayName="${mod_name}"
 authors="GaiusRed"
 description='''
-Planned Source-powered Botany Pots and Hopper Botany Pots for ATM10 Aeronautics.
-Bootstrap only: no new pots or Source consumption yet.
+Adds 61 Ars Hopper Botany Pots for ATM10 Aeronautics, powered by Ars Source,
+Liquid Source, or Gaseous Source while retaining ordinary hopper pot behavior.
 '''
 
 [[dependencies.${mod_id}]]
