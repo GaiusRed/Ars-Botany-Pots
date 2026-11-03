@@ -1,5 +1,7 @@
 # Compatibility baseline
 
+Ars Nouveau and Botany Pots are now the only required gameplay mods. The versions below remain the full integration test baseline; Sauce, Mekanism, StarbuncleMania and Ars Elemental are optional. See [optional integration verification](verification/optional-source-integrations.md) for the required-only runtime and resource availability checks.
+
 ## Released pack
 
 Checked on 2026-11-02:

@@ -76,11 +76,11 @@ public final class ArsPotGameTests {
             var deferred=restored.saveWithoutMetadata(h.getLevel().registryAccess());
             h.assertTrue(deferred.getCompound("sourcepots").equals(nbt.getCompound("sourcepots")),"Save before setLevel must retain deferred power");
             restored.setLevel(h.getLevel());
-            h.assertTrue(restored.sourceAccess().fluidHandler().getFluidInTank(0).getAmount()==500 && restored.sourceAccess().chemicalHandler().getChemicalInTank(0).getAmount()==250,"Both buffers must survive chunk load");
+            h.assertTrue(restored.sourceAccess().fluidHandler().getFluidInTank(0).getAmount()==500 && MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==250,"Both buffers must survive chunk load");
             h.assertTrue(power(restored).equals(power(ars)) && restored.growthTime()==ars.growthTime(),"Timers and upstream growth must survive load");
             restored.setSeed(ItemStack.EMPTY);
             var inactive=restored.saveWithoutMetadata(h.getLevel().registryAccess()); restored.loadAdditional(inactive,h.getLevel().registryAccess());
-            h.assertTrue(restored.sourceAccess().chemicalHandler().getChemicalInTank(0).getAmount()==250,"Ineligible crops must not discard saved power"); h.succeed();
+            h.assertTrue(MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==250,"Ineligible crops must not discard saved power"); h.succeed();
 
         }
     }
@@ -98,7 +98,7 @@ public final class ArsPotGameTests {
             liquid.clearCache(); gas.clearCache();
             var restored=new ArsBotanyPotBlockEntity(ars.getBlockPos(),ars.getBlockState());
             restored.loadAdditional(saved,h.getLevel().registryAccess()); restored.setLevel(h.getLevel());
-            h.assertTrue(restored.sourceAccess().fluidHandler().getFluidInTank(0).getAmount()==100 && restored.sourceAccess().chemicalHandler().getChemicalInTank(0).getAmount()==50,"Reduced capacities must clamp saved resources");
+            h.assertTrue(restored.sourceAccess().fluidHandler().getFluidInTank(0).getAmount()==100 && MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==50,"Reduced capacities must clamp saved resources");
         } finally { liquid.set(oldLiquid); gas.set(oldGas); liquid.clearCache(); gas.clearCache(); }
         h.succeed();
     }
@@ -150,7 +150,7 @@ public final class ArsPotGameTests {
         var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
         saved.getCompound("sourcepots").putLong("liquid",40); saved.getCompound("sourcepots").putLong("gas",30);
         ars.loadAdditional(saved,h.getLevel().registryAccess());
-        h.assertTrue(fluid==ars.sourceAccess().fluidHandler() && gas==ars.sourceAccess().chemicalHandler(),"Loading live NBT must keep cached input capability identity");
+        h.assertTrue(fluid==ars.sourceAccess().fluidHandler() && gas==MekanismTestAccess.chemical(ars.sourceAccess()),"Loading live NBT must keep cached input capability identity");
         h.assertTrue(fluid.getFluidInTank(0).getAmount()==40 && gas.getChemicalInTank(0).getAmount()==30,"Cached views must observe restored buffers");
         fill(ars);
         h.assertTrue(fluid.getFluidInTank(0).getAmount()==500 && gas.getChemicalInTank(0).getAmount()==250,"Cached views and current pot must share subsequent intake"); h.succeed();
@@ -314,7 +314,7 @@ public final class ArsPotGameTests {
     @GameTest(template="empty", batch="configured-growth")
     public static void invalidRangeInAnyModeCannotChargeFundedGas(GameTestHelper h) {
         var ars = pot(h);
-        var gas = ars.sourceAccess().chemicalHandler();
+        var gas = MekanismTestAccess.chemical(ars.sourceAccess());
         fill(ars);
         int[][] invalid = {{2,1,1,1,1,1}, {1,1,2,1,1,1}, {1,1,1,1,2,1}};
         for (var bounds : invalid) {
@@ -336,7 +336,7 @@ public final class ArsPotGameTests {
                 var ars = pot(h);
                 if (mode == SourceMode.JAR) jar(h);
                 else if (mode == SourceMode.LIQUID) fillLiquid(ars);
-                else ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
+                else MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
                 tick(h, ars);
                 h.assertTrue(ars.growthTime() == 1 + (mode == SourceMode.JAR ? 37 : mode == SourceMode.LIQUID ? 47 : 57), mode + " must use its own configured growth range");
                 h.assertTrue(power(ars).getLong("boost_cooldown") ==
@@ -362,7 +362,7 @@ public final class ArsPotGameTests {
             var ars = pot(h);
             if (mode == SourceMode.JAR) jar(h);
             else if (mode == SourceMode.LIQUID) fillLiquid(ars);
-            else ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
+            else MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
             tick(h, ars);
             h.assertTrue(ars.growthTime() >= 1 + (mode == SourceMode.JAR ? 600 : mode == SourceMode.LIQUID ? 500 : 400)
                     && ars.growthTime() <= 1 + (mode == SourceMode.JAR ? 800 : mode == SourceMode.LIQUID ? 700 : 600),
@@ -381,7 +381,7 @@ public final class ArsPotGameTests {
                 ars.updateGrowthTime(ars.getRequiredGrowthTicks() - 30);
                 if (mode == SourceMode.JAR) jar(h);
                 else if (mode == SourceMode.LIQUID) fillLiquid(ars);
-                else ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
+                else MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
                 tick(h, ars);
                 h.assertTrue(ars.growthTime() >= ars.getRequiredGrowthTicks() && ars.canHarvest(),
                         mode + " must reach maturity without a finishing delay");
@@ -398,7 +398,7 @@ public final class ArsPotGameTests {
         try (var ignored = new GrowthConfigFixture(1000, 1000)) {
             var ars=pot(h);
             ars.updateGrowthTime(ars.getRequiredGrowthTicks()-301);
-            ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE); tick(h,ars);
+            MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE); tick(h,ars);
             h.assertTrue(power(ars).getDouble("growth_credit")==700, "1000 paid minus 300 needed must retain exactly 700");
             var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
             ars.loadAdditional(saved,h.getLevel().registryAccess());
@@ -442,7 +442,7 @@ public final class ArsPotGameTests {
                 tick(h,ars);
                 h.assertTrue(power(ars).getDouble("growth_credit")==700 && ars.growthTime()==-1,
                         "Missing recipe holds credit after upstream harvest instead of applying it");
-                h.assertTrue(ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250,
+                h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250,
                         "Missing recipe refuses resource intake despite saved credit");
                 tick(h,ars);
                 h.assertTrue(power(ars).getDouble("growth_credit")==700 && power(ars).getLong("liquid")==500,
@@ -495,7 +495,7 @@ public final class ArsPotGameTests {
             for(int tick=0;tick<8;tick++) tick(h,ars);
             h.assertTrue(harvests[0]==0 && power(ars).getDouble("growth_credit")==981 && power(ars).getLong("liquid")==500,
                     "Blocked harvest must retain credit and buffered payment without generating loot");
-            h.assertTrue(ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250,
+            h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250,
                     "Blocked pot rejects new resource intake");
             harvestAllowed[0]=true;
             for(int tick=0;tick<6 && harvests[0]==0;tick++) tick(h,ars);
@@ -534,12 +534,12 @@ public final class ArsPotGameTests {
     @GameTest(template="empty", batch="source-overflow")
     public static void loadedSufficientBankRejectsPushUntilCreditIsUsed(GameTestHelper h) {
         var ars=pot(h);
-        var gas=ars.sourceAccess().chemicalHandler(); var liquid=ars.sourceAccess().fluidHandler();
+        var gas=MekanismTestAccess.chemical(ars.sourceAccess()); var liquid=ars.sourceAccess().fluidHandler();
         var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
         saved.getCompound("sourcepots").putDouble("growth_credit",2147483647d);
         saved.getCompound("sourcepots").putBoolean("source_assisted",true);
         ars.loadAdditional(saved,h.getLevel().registryAccess());
-        h.assertTrue(ars.sourceAccess().chemicalHandler()==gas && ars.sourceAccess().fluidHandler()==liquid,"Loading must keep neighbor-held handler identities");
+        h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess())==gas && ars.sourceAccess().fluidHandler()==liquid,"Loading must keep neighbor-held handler identities");
         h.assertTrue(gas.insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250
                 && liquid.fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE)==0,
                 "Before first loaded tick, sufficient credit rejects direct pushes through existing views");
@@ -574,7 +574,7 @@ public final class ArsPotGameTests {
     public static void paymentUsesOneValidatedRecipeResult(GameTestHelper h) {
         try(var ignored=new GrowthConfigFixture(37,37)) {
             var ars=pot(h);
-            ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE);
+            MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE);
             int[] evaluations={0};
             var varyingAmount=new net.darkhax.botanypots.common.api.data.growthamount.GrowthAmount() {
                 public int getAmount(net.darkhax.botanypots.common.api.context.BotanyPotContext context,net.minecraft.world.level.Level level) {return evaluations[0]++==0?500:0;}
@@ -630,7 +630,7 @@ public final class ArsPotGameTests {
     }
     private static void fill(ArsBotanyPotBlockEntity pot) {
         fillLiquid(pot);
-        pot.sourceAccess().chemicalHandler().insertChemical(new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("starbunclemania:source_gas")).orElseThrow(),250),Action.EXECUTE);
+        MekanismTestAccess.chemical(pot.sourceAccess()).insertChemical(new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("starbunclemania:source_gas")).orElseThrow(),250),Action.EXECUTE);
     }
     private static void fillLiquid(ArsBotanyPotBlockEntity pot) {
         pot.sourceAccess().fluidHandler().fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE);

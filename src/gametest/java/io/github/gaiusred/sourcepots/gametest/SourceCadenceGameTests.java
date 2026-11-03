@@ -95,7 +95,7 @@ public final class SourceCadenceGameTests {
 
     private static void assertSharedHandlers(GameTestHelper h, ArsBotanyPotBlockEntity pot) {
         var fluid=pot.sourceAccess().fluidHandler();
-        var chemical=pot.sourceAccess().chemicalHandler();
+        var chemical=MekanismTestAccess.chemical(pot.sourceAccess());
         for(var side:Direction.values()) {
             h.assertTrue(h.getLevel().getCapability(Capabilities.FluidHandler.BLOCK,pot.getBlockPos(),side)==fluid,
                     "All six fluid faces must expose the same handler and storage");
@@ -124,7 +124,7 @@ public final class SourceCadenceGameTests {
     }
 
     private static long stored(ArsBotanyPotBlockEntity pot, boolean gas) {
-        return gas?pot.sourceAccess().chemicalHandler().getChemicalInTank(0).getAmount()
+        return gas?MekanismTestAccess.chemical(pot.sourceAccess()).getChemicalInTank(0).getAmount()
                 :pot.sourceAccess().fluidHandler().getFluidInTank(0).getAmount();
     }
 

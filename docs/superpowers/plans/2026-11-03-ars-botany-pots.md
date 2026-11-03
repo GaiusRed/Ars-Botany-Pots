@@ -4,6 +4,8 @@
 
 ## Live progress
 
+- Post-merge accessibility work is complete on `feature/optional-source-integrations`: only Ars Nouveau and Botany Pots are required gameplay mods; liquid and gas integrations are optional. See the [optional integration plan](2026-11-03-optional-source-integrations.md) for the new work and verification. The tasks below retain their historical implementation settings and delivery record.
+
 - Task 14: cleanup and verification complete. Implementation checkpoint `0bad75f` is committed. All 81 GameTests and 29 unit tests are retained in a development-only test mod; production jars exclude test code. The clean build and data/package/isolation checks pass. README and display name use **Ars Botany Pots**, while `sourcepots` save/registry identity and gameplay remain unchanged. Cleanup commit and GitHub PR delivery are prepared; GitHub is the delivery record.
 
 - Task 13 amendment: complete and independently reviewed. Growth ranges are Jar 600–800, liquid 500–700 and gas 400–600; gas costs 250 units. Defaults and the backed-up/migrated dev config match all 15 settings. Final gate passes 81 GameTests, 29 unit tests and build in 49 seconds. Updated client PID 26924 reached Singleplayer, responding; JEI initialized at 04:36:36. Ready for user testing.

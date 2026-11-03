@@ -31,14 +31,14 @@ public final class SourceAccessGameTests {
     public static void buffersCoexistAt500And250(GameTestHelper h) {
         int[] changes = {0};
         var access = new PotSourceAccess(h.getLevel(), h.absolutePos(CENTER), SETTINGS, () -> true, () -> changes[0]++);
-        h.assertTrue(access.fluidHandler().getTankCapacity(0) == 500 && access.chemicalHandler().getChemicalTankCapacity(0) == 250, "Independent capacities must be 500 and 250");
+        h.assertTrue(access.fluidHandler().getTankCapacity(0) == 500 && MekanismTestAccess.chemical(access).getChemicalTankCapacity(0) == 250, "Independent capacities must be 500 and 250");
         h.assertTrue(access.fluidHandler().fill(fluid(1000), FluidAction.SIMULATE) == 500, "Simulated fluid acceptance is bounded");
-        h.assertTrue(access.chemicalHandler().insertChemical(gas(400), Action.SIMULATE).getAmount() == 150, "Simulated chemical insertion returns remainder");
+        h.assertTrue(MekanismTestAccess.chemical(access).insertChemical(gas(400), Action.SIMULATE).getAmount() == 150, "Simulated chemical insertion returns remainder");
         h.assertTrue(changes[0] == 0 && storedFluid(access) == 0 && storedGas(access) == 0, "Simulation must not mutate or notify");
         fill(h, access);
         h.assertTrue(changes[0] == 2, "Each actual fill notifies once");
         var fluidCopy = access.fluidHandler().getFluidInTank(0);
-        var gasCopy = access.chemicalHandler().getChemicalInTank(0);
+        var gasCopy = MekanismTestAccess.chemical(access).getChemicalInTank(0);
         fluidCopy.setAmount(1); gasCopy.setAmount(1);
         h.assertTrue(storedFluid(access) == 500 && storedGas(access) == 250, "Stack views cannot mutate storage");
         h.assertTrue(access.pay(SourceMode.GAS) && storedFluid(access) == 500 && storedGas(access) == 0, "Gas payment leaves liquid untouched");
@@ -52,7 +52,7 @@ public final class SourceAccessGameTests {
         var a = access(h); fill(h, a); a.pay(SourceMode.GAS); a.pay(SourceMode.LIQUID);
         h.assertTrue(a.fluidHandler().fill(new FluidStack(Fluids.WATER, 500), FluidAction.EXECUTE) == 0, "Water is not Source");
         var wrong = new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("mekanism:oxygen")).orElseThrow(), 250);
-        h.assertTrue(a.chemicalHandler().insertChemical(wrong, Action.EXECUTE).getAmount() == 250, "Oxygen must remain unaccepted");
+        h.assertTrue(MekanismTestAccess.chemical(a).insertChemical(wrong, Action.EXECUTE).getAmount() == 250, "Oxygen must remain unaccepted");
         h.assertTrue(storedFluid(a) == 0 && storedGas(a) == 0, "Wrong resources cannot enter storage"); h.succeed();
     }
 
@@ -60,7 +60,7 @@ public final class SourceAccessGameTests {
     public static void partialFillCannotPay(GameTestHelper h) {
         var a = access(h);
         h.assertTrue(a.fluidHandler().fill(fluid(499), FluidAction.EXECUTE) == 499, "Partial fluid accepted");
-        h.assertTrue(a.chemicalHandler().insertChemical(gas(199), Action.EXECUTE).isEmpty(), "Partial gas accepted");
+        h.assertTrue(MekanismTestAccess.chemical(a).insertChemical(gas(199), Action.EXECUTE).isEmpty(), "Partial gas accepted");
         h.assertTrue(!a.canPay(SourceMode.GAS) && !a.canPay(SourceMode.LIQUID) && !a.pay(SourceMode.GAS) && !a.pay(SourceMode.LIQUID), "Partial operation cannot pay");
         h.assertTrue(storedFluid(a) == 499 && storedGas(a) == 199, "Failed payment preserves partial contents"); h.succeed();
     }
@@ -69,7 +69,7 @@ public final class SourceAccessGameTests {
     public static void fullBufferRejectsMore(GameTestHelper h) {
         var a = access(h); fill(h,a);
         for (var action : FluidAction.values()) h.assertTrue(a.fluidHandler().fill(fluid(1), action) == 0, "Full liquid buffer rejects more");
-        for (var action : Action.values()) h.assertTrue(a.chemicalHandler().insertChemical(gas(1), action).getAmount() == 1, "Full chemical buffer returns all");
+        for (var action : Action.values()) h.assertTrue(MekanismTestAccess.chemical(a).insertChemical(gas(1), action).getAmount() == 1, "Full chemical buffer returns all");
         h.assertTrue(storedFluid(a) == 500 && storedGas(a) == 250, "Buffers cannot overfill"); h.succeed();
     }
 
@@ -99,12 +99,12 @@ public final class SourceAccessGameTests {
             h.assertTrue(a.fluidHandler().drain(fluid(500),action).isEmpty(), "Stack drain denied");
         }
         for(var action:Action.values()) {
-            h.assertTrue(a.chemicalHandler().extractChemical(0,200,action).isEmpty(), "Indexed extraction denied");
-            h.assertTrue(a.chemicalHandler().extractChemical(200,action).isEmpty(), "Amount extraction denied");
-            h.assertTrue(a.chemicalHandler().extractChemical(gas(250),action).isEmpty(), "Stack extraction denied");
+            h.assertTrue(MekanismTestAccess.chemical(a).extractChemical(0,200,action).isEmpty(), "Indexed extraction denied");
+            h.assertTrue(MekanismTestAccess.chemical(a).extractChemical(200,action).isEmpty(), "Amount extraction denied");
+            h.assertTrue(MekanismTestAccess.chemical(a).extractChemical(gas(250),action).isEmpty(), "Stack extraction denied");
         }
         boolean rejected=false;
-        try { a.chemicalHandler().setChemicalInTank(0,ChemicalStack.EMPTY); } catch(UnsupportedOperationException expected) { rejected=true; }
+        try { MekanismTestAccess.chemical(a).setChemicalInTank(0,ChemicalStack.EMPTY); } catch(UnsupportedOperationException expected) { rejected=true; }
         h.assertTrue(rejected && storedFluid(a)==500 && storedGas(a)==250,"Setter cannot bypass input-only policy"); h.succeed();
     }
 
@@ -207,7 +207,7 @@ public final class SourceAccessGameTests {
 
     private static void assertGated(GameTestHelper h,PotSourceAccess a) {
         for(var action:FluidAction.values()) h.assertTrue(a.fluidHandler().fill(fluid(500),action)==0,"Ineligible liquid intake denied");
-        for(var action:Action.values()) h.assertTrue(a.chemicalHandler().insertChemical(gas(250),action).getAmount()==250,"Ineligible gas intake denied");
+        for(var action:Action.values()) h.assertTrue(MekanismTestAccess.chemical(a).insertChemical(gas(250),action).getAmount()==250,"Ineligible gas intake denied");
         var supplier=ResourceTestEnvironment.place(h,CENTER.below(),Direction.UP,false); a.pullAdjacent();
         h.assertTrue(supplier.fluid.getFluidAmount()==1000 && supplier.gas.getStored()==1000 && storedFluid(a)==0 && storedGas(a)==0,"Ineligible growth must not drain suppliers");
     }
@@ -216,10 +216,10 @@ public final class SourceAccessGameTests {
     static ChemicalStack gas(long amount) { return new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("starbunclemania:source_gas")).orElseThrow(),amount); }
     private static PotSourceAccess access(GameTestHelper h) { return new PotSourceAccess(h.getLevel(),h.absolutePos(CENTER),SETTINGS,()->true); }
     private static int storedFluid(PotSourceAccess a) { return a.fluidHandler().getFluidInTank(0).getAmount(); }
-    private static long storedGas(PotSourceAccess a) { return a.chemicalHandler().getChemicalInTank(0).getAmount(); }
+    private static long storedGas(PotSourceAccess a) { return MekanismTestAccess.chemical(a).getChemicalInTank(0).getAmount(); }
     private static void fill(GameTestHelper h,PotSourceAccess a) {
         h.assertTrue(a.fluidHandler().fill(fluid(500),FluidAction.EXECUTE)==500,"Accept one liquid operation");
-        h.assertTrue(a.chemicalHandler().insertChemical(gas(250),Action.EXECUTE).isEmpty(),"Accept one gas operation");
+        h.assertTrue(MekanismTestAccess.chemical(a).insertChemical(gas(250),Action.EXECUTE).isEmpty(),"Accept one gas operation");
         h.assertTrue(a.canPay(SourceMode.LIQUID) && a.canPay(SourceMode.GAS),"Both full buffers can independently pay");
     }
     private static SourceJarTile jar(GameTestHelper h,BlockPos pos,int amount,boolean creative) {
