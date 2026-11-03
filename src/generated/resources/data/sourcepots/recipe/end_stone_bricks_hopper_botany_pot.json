@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "A": {
+      "item": "minecraft:gold_nugget"
+    },
+    "B": {
+      "tag": "c:planks/archwood"
+    },
+    "C": {
+      "item": "botanypots:end_stone_bricks_hopper_botany_pot"
+    }
+  },
+  "pattern": [
+    "A A",
+    "BCB",
+    "BBB"
+  ],
+  "result": {
+    "count": 1,
+    "id": "sourcepots:end_stone_bricks_hopper_botany_pot"
+  }
+}

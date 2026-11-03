@@ -1,6 +1,7 @@
 .gradle/
 build/
 run/
+logs/
 .idea/
 *.iml
 .classpath
@@ -8,3 +9,10 @@ run/
 .settings/
 .vscode/
 .DS_Store
+src/generated/resources/.cache/
+.superpowers/
+crash-reports/
+*.log
+hs_err_pid*.log
+replay_pid*.log
+scratch/

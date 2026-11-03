@@ -1,0 +1,11 @@
+# Asset attribution
+
+The pot body models reference the installed Botany Pots models and textures by resource ID. Botany Pots is by Darkhax and is licensed under GNU LGPL version 2.1. Its license is available at [upstream/BotanyPots/LICENSE](../upstream/BotanyPots/LICENSE). The inspected reference revision is `335c997dc456f6ea2b9bc3ff13319dfb791803e6`; the runtime dependency remains Botany Pots 21.1.44.
+
+Source Pots does not copy the upstream pot mesh or textures into its assets. Each composite model references the exact upstream hopper variant as its body. This retains the upstream side material, top texture, lower hopper shell, and texture orientation. The item model inherits the same composite block model.
+
+The shared gold rim is original geometry authored for this addon on 2026-11-03. Four upward faces form a ring around the existing opening. They reference Minecraft's `minecraft:block/gold_block` texture; no Minecraft texture is redistributed. The cap sits at Y=8.125 model units, above the upstream outer top at 8 and inner lip at 8.1. It raises the visible rim by 0.125 model units and leaves the 10 by 10 opening clear. The geometry has no coplanar overlap with the upstream lip. In-game appearance review remains part of Task 7.
+
+The `runData` configuration sets `sourcepots.datagen=true`. With that property set and NeoForge data generation active, `PotDataCompatibility` removes only Starbunclemania's `datagen.Setup` event subscriber after subscriber registration and before data events. NeoForge 21.1.250 dispatches those events to all loaded mods even when `--mod sourcepots` selects the output. Starbunclemania 1.5.9's generator references the removed Ars Nouveau `common.datagen.PatchouliProvider` class and fails with the pinned Ars Nouveau 5.13.3. The workaround excludes that unused dependency generator from this data run. It does not run during client, server, or GameTest launches.
+
+Generated block, item, and pickaxe tags preserve each original pot's published membership. The provider reads Botany Pots' own tag resources through its mod file, including the pickaxe tag's reference to the pot block tag. The pinned upstream tags omit the 12 brick materials. Their addon variants preserve those omissions while still receiving recipes, models, names, and self loot.
