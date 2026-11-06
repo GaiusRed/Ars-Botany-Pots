@@ -197,7 +197,7 @@ public final class PotDataGameTests {
             pot.sourceAccess().fluidHandler().fill(liquid, FluidAction.EXECUTE);
             var sourceGas = MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("starbunclemania:source_gas")).orElseThrow();
             var gas = new ChemicalStack(sourceGas, 100);
-            pot.sourceAccess().chemicalHandler().insertChemical(gas, Action.EXECUTE);
+            MekanismTestAccess.chemical(pot.sourceAccess()).insertChemical(gas, Action.EXECUTE);
             var power = pot.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots");
             h.assertTrue(power.getLong("jar_remaining") == 100 && power.getLong("liquid") == 250 && power.getLong("gas") == 100,
                     "Fixture must have paid time and both filled buffers");

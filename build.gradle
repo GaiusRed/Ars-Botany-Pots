@@ -22,20 +22,34 @@ repositories {
 }
 
 sourceSets {
+    smoke {
+        compileClasspath += sourceSets.main.output
+        runtimeClasspath += sourceSets.main.output
+    }
     gametest {
         compileClasspath += sourceSets.main.output
         runtimeClasspath += sourceSets.main.output
     }
 }
-configurations.gametestImplementation.extendsFrom configurations.implementation
+configurations {
+    fullOptionalRuntime { canBeConsumed = false; canBeResolved = true }
+    mekanismSmokeRuntime { canBeConsumed = false; canBeResolved = true }
+    sauceExtraction { canBeConsumed = false; canBeResolved = true; transitive = false }
+}
+configurations.smokeImplementation.extendsFrom configurations.implementation
+configurations.smokeRuntimeOnly.extendsFrom configurations.runtimeOnly
+configurations.gametestImplementation.extendsFrom configurations.implementation, configurations.compileOnly
+configurations.gametestRuntimeOnly.extendsFrom configurations.fullOptionalRuntime
 configurations.gametestRuntimeOnly.extendsFrom configurations.runtimeOnly
 
 neoForge {
     version = neo_version
     addModdingDependenciesTo(sourceSets.gametest)
+    addModdingDependenciesTo(sourceSets.smoke)
     mods {
         sourcepots { sourceSet sourceSets.main }
         sourcepots_gametest { sourceSet sourceSets.gametest }
+        sourcepots_smoke { sourceSet sourceSets.smoke }
     }
     runs {
         client {
@@ -46,6 +60,52 @@ neoForge {
             server()
             loadedMods = [mods.sourcepots]
             programArgument '--nogui'
+        }
+        coreGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.smoke
+            loadedMods = [mods.sourcepots, mods.sourcepots_smoke]
+            gameDirectory = file('run/optional-core')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'sourcepots_smoke'
+            systemProperty 'sourcepots.smokeProfile', 'core'
+        }
+        fluidGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.smoke
+            loadedMods = [mods.sourcepots, mods.sourcepots_smoke]
+            gameDirectory = file('run/optional-fluid')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'sourcepots_smoke'
+            systemProperty 'sourcepots.smokeProfile', 'fluid'
+        }
+        mekanismGameTestServer {
+            type = 'gameTestServer'
+            sourceSet = sourceSets.smoke
+            loadedMods = [mods.sourcepots, mods.sourcepots_smoke]
+            gameDirectory = file('run/optional-mek')
+            systemProperty 'neoforge.enabledGameTestNamespaces', 'sourcepots_smoke'
+            systemProperty 'sourcepots.smokeProfile', 'mekanism'
+        }
+        fullClient {
+            client()
+            sourceSet = sourceSets.gametest
+            loadedMods = [mods.sourcepots]
+            gameDirectory = file('run/full-client')
+        }
+        fullServer {
+            server()
+            sourceSet = sourceSets.gametest
+            loadedMods = [mods.sourcepots]
+            gameDirectory = file('run/full-server')
+            programArgument '--nogui'
+        }
+        fullData {
+            data()
+            sourceSet = sourceSets.gametest
+            loadedMods = [mods.sourcepots]
+            gameDirectory = file('run/full-data')
+            systemProperty 'sourcepots.datagen', 'true'
+            programArguments.addAll '--mod', mod_id, '--all', '--output', file('build/generated/full').absolutePath,
+                    '--existing', file('src/main/resources').absolutePath
         }
         gameTestServer {
             type = 'gameTestServer'
@@ -84,10 +144,14 @@ dependencies {
     add(clientModRuntimeClasspath.name, "curse.maven:jei-238222:${jei_file}")
 
     implementation "curse.maven:botany-pots-353928:${botanypots_file}"
-    implementation "curse.maven:starbunclemania-746215:${starbunclemania_file}"
+    compileOnly "curse.maven:starbunclemania-746215:${starbunclemania_file}"
+    fullOptionalRuntime "curse.maven:starbunclemania-746215:${starbunclemania_file}"
     implementation "curse.maven:ars-nouveau-401955:${ars_nouveau_file}"
-    implementation "curse.maven:mekanism-268560:${mekanism_file}"
-    runtimeOnly "curse.maven:ars-elemental-561470:${ars_elemental_file}"
+    compileOnly "curse.maven:mekanism-268560:${mekanism_file}"
+    fullOptionalRuntime "curse.maven:mekanism-268560:${mekanism_file}"
+    mekanismSmokeRuntime "curse.maven:mekanism-268560:${mekanism_file}"
+    sauceExtraction "curse.maven:ars-elemental-561470:${ars_elemental_file}"
+    fullOptionalRuntime "curse.maven:ars-elemental-561470:${ars_elemental_file}"
     implementation "curse.maven:bookshelf-228525:${bookshelf_file}"
     runtimeOnly "curse.maven:prickle-1023259:${prickle_file}"
     runtimeOnly "curse.maven:curios-309927:${curios_file}"
@@ -126,4 +190,35 @@ tasks.withType(JavaCompile).configureEach {
 tasks.withType(AbstractArchiveTask).configureEach {
     preserveFileTimestamps = false
     reproducibleFileOrder = true
+}
+
+// The pinned Elemental archive is an extraction input, never a fluid-smoke runtime mod.
+def extractedSauce = layout.buildDirectory.file('optional-runtime/sauce-1.21.1-0.0.61.100.jar')
+def extractSmokeSauce = tasks.register('extractSmokeSauce') {
+    inputs.files configurations.sauceExtraction
+    outputs.file extractedSauce
+    doLast {
+        def archive = configurations.sauceExtraction.singleFile
+        new java.util.zip.ZipFile(archive).withCloseable { zip ->
+            def entry = zip.getEntry('META-INF/jarjar/sauce-1.21.1-0.0.61.100.jar')
+            if (entry == null) throw new GradleException('Pinned Sauce archive entry is missing')
+            def target = extractedSauce.get().asFile
+            target.parentFile.mkdirs()
+            zip.getInputStream(entry).withCloseable { input -> target.bytes = input.bytes }
+            def digest = java.security.MessageDigest.getInstance('SHA-256').digest(target.bytes).encodeHex().toString()
+            if (digest != '58ce7a36fc6fb7631b35765d58227b2982ece031559fa4122f1391a17811b251') {
+                throw new GradleException('Pinned Sauce archive hash mismatch: ' + digest)
+            }
+        }
+    }
+}
+tasks.named('runFluidGameTestServer', JavaExec) {
+    dependsOn extractSmokeSauce
+    classpath files(extractedSauce).builtBy(extractSmokeSauce)
+}
+tasks.named('runMekanismGameTestServer', JavaExec) {
+    classpath configurations.mekanismSmokeRuntime
+}
+tasks.named('runFullClient', JavaExec) {
+    classpath clientModRuntimeClasspath
 }

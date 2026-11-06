@@ -45,7 +45,7 @@ public final class ArsBotanyPotBlockEntity extends BotanyPotBlockEntity {
         if (source.restoreBuffers(savedLong(pendingPower, "liquid"), savedLong(pendingPower, "gas"))) {
             // Once per restoration, never per tick or capability query.
             LogUtils.getLogger().warn("Clamped saved Source buffers at {} to configured capacities (liquid {}, gas {})",
-                    worldPosition, source.fluidHandler().getTankCapacity(0), source.chemicalHandler().getChemicalTankCapacity(0));
+                    worldPosition, source.fluidHandler().getTankCapacity(0), source.gasCapacity());
         }
         pendingPower = new CompoundTag();
     }
@@ -124,8 +124,8 @@ public final class ArsBotanyPotBlockEntity extends BotanyPotBlockEntity {
         var access = sourceAccess();
         var power = access == null ? pendingPower.copy() : new CompoundTag();
         if (access != null) {
-            power.putLong("liquid", access.fluidHandler().getFluidInTank(0).getAmount());
-            power.putLong("gas", access.chemicalHandler().getChemicalInTank(0).getAmount());
+            power.putLong("liquid", access.storedLiquid());
+            power.putLong("gas", access.storedGas());
         }
         power.putDouble("growth_credit", growthCredit);
         power.putBoolean("source_assisted", sourceAssisted);

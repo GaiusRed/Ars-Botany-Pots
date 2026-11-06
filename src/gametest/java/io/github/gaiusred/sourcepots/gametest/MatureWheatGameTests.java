@@ -86,7 +86,7 @@ public final class MatureWheatGameTests {
         try(var ignored=new GrowthConfigFixture(600,600)) {
             var ars=ArsPotGameTests.pot(h);
             ars.updateGrowthTime(ars.getRequiredGrowthTicks()-22);
-            h.assertTrue(ars.sourceAccess().chemicalHandler().insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).isEmpty(),"Near-mature crop accepts one operation");
+            h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).isEmpty(),"Near-mature crop accepts one operation");
             registeredTick(h,ars);
             h.assertTrue(ars.canHarvest() && outputs(ars).equals(new Counts(0,0)),"Paid growth reaches maturity; upstream harvest runs once on next tick");
             resetRandom(h,42); registeredTick(h,ars);

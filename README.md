@@ -8,11 +8,10 @@ Minecraft **1.21.1**, NeoForge **21.1.250** and Java **21**.
 
 - Botany Pots
 - Ars Nouveau
-- StarbuncleMania
-- Mekanism
-- Sauce Library, bundled with StarbuncleMania
 
-Install their required libraries: Bookshelf, Prickle, Curios API and GeckoLib. See [compatibility](docs/compatibility.md) for the tested versions.
+Install their required libraries: Bookshelf, Prickle, Curios API and GeckoLib. Source Jars work with these mods alone.
+
+Sauce Library enables Liquid Source when `sauce:source_fluid` is registered. Mekanism and StarbuncleMania enable Gaseous Source when `starbunclemania:source_gas` is registered. These integrations are optional. See [compatibility](docs/compatibility.md) for the tested versions.
 
 ## Recipe
 
@@ -40,4 +39,8 @@ Jar payment attempts have an 80-tick cooldown. Payments provide a 100-tick windo
 
 All values are configurable in `config/sourcepots-server.toml`. An existing world-specific `serverconfig/sourcepots-server.toml` overrides it. Restart the world or server after editing. At normal speed, 20 ticks equal one second.
 
-[Verification](docs/verification/ars-botany-pots.md) · [Asset attribution](docs/asset-attribution.md)
+## Development
+
+`./gradlew runClient` uses the required gameplay mods and development JEI. `./gradlew runFullClient` adds the pinned optional integrations. `./gradlew build` produces one distributable mod jar for either setup.
+
+[Optional integration verification](docs/verification/optional-source-integrations.md) · [Gameplay verification](docs/verification/ars-botany-pots.md) · [Asset attribution](docs/asset-attribution.md)

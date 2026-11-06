@@ -3,6 +3,7 @@ package io.github.gaiusred.sourcepots.registry;
 import io.github.gaiusred.sourcepots.SourcePots;
 import io.github.gaiusred.sourcepots.block.ArsBotanyPotBlock;
 import io.github.gaiusred.sourcepots.block.ArsBotanyPotBlockEntity;
+import io.github.gaiusred.sourcepots.compat.mekanism.MekanismCompatibility;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import net.darkhax.botanypots.common.impl.block.entity.BotanyPotBlockEntity;
@@ -18,6 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.neoforged.bus.api.IEventBus;
+import net.neoforged.fml.ModList;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
@@ -62,10 +64,9 @@ public final class ModContent {
                 (pot, side) -> side == Direction.DOWN ? new SidedInvWrapper(pot, Direction.DOWN) : null);
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, POT_ENTITY.get(),
                 (pot, side) -> side != null && pot instanceof ArsBotanyPotBlockEntity ars && ars.sourceAccess() != null
+                        && ars.sourceAccess().liquidAvailable()
                         ? ars.sourceAccess().fluidHandler() : null);
-        event.registerBlockEntity(mekanism.common.capabilities.Capabilities.CHEMICAL.block(), POT_ENTITY.get(),
-                (pot, side) -> side != null && pot instanceof ArsBotanyPotBlockEntity ars && ars.sourceAccess() != null
-                        ? ars.sourceAccess().chemicalHandler() : null);
+        if (ModList.get().isLoaded("mekanism")) MekanismCompatibility.registerCapabilities(event);
     }
     private ModContent() {}
 }

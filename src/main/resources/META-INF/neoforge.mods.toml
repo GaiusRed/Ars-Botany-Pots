@@ -36,7 +36,7 @@ side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="starbunclemania"
-type="required"
+type="optional"
 versionRange="[1.5.9,)"
 ordering="AFTER"
 side="BOTH"
@@ -50,14 +50,14 @@ side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="mekanism"
-type="required"
+type="optional"
 versionRange="[10.7.19,)"
 ordering="AFTER"
 side="BOTH"
 
 [[dependencies.${mod_id}]]
 modId="sauce"
-type="required"
+type="optional"
 versionRange="[0.0.40,)"
 ordering="AFTER"
 side="BOTH"
