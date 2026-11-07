@@ -9,6 +9,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SourceSchedulerTest {
@@ -106,24 +107,24 @@ class SourceSchedulerTest {
     }
 
     @Test
-    void configuredIntervalsChangePriority() {
+    void configuredIntervalsDoNotChangePriority() {
         CountingAccess access = new CountingAccess(SourceMode.GAS, SourceMode.LIQUID, SourceMode.JAR);
-        SourceSettings settings = intervals(20, 3, 5);
+        SourceSettings settings = intervals(20, 1, 9);
 
-        assertEquals(List.of(0, 3, 6, 9), boostTicks(settings, access, 0, 9, true));
-        assertEquals(4, access.payments(SourceMode.LIQUID));
-        assertEquals(0, access.attempts(SourceMode.GAS));
+        assertEquals(List.of(0, 9), boostTicks(settings, access, 0, 9, true));
+        assertEquals(0, access.payments(SourceMode.LIQUID));
+        assertEquals(2, access.attempts(SourceMode.GAS));
         assertEquals(0, access.attempts(SourceMode.JAR));
     }
 
     @Test
-    void configuredJarCanBeFastest() {
+    void configuredFastJarStillLosesToGas() {
         CountingAccess access = new CountingAccess(SourceMode.GAS, SourceMode.LIQUID, SourceMode.JAR);
         SourceSettings settings = intervals(2, 3, 5);
 
-        assertEquals(List.of(0, 2, 4, 6, 8), boostTicks(settings, access, 0, 9, true));
-        assertEquals(1, access.payments(SourceMode.JAR));
-        assertEquals(0, access.attempts(SourceMode.GAS));
+        assertEquals(List.of(0, 5), boostTicks(settings, access, 0, 9, true));
+        assertEquals(0, access.payments(SourceMode.JAR));
+        assertEquals(2, access.attempts(SourceMode.GAS));
         assertEquals(0, access.attempts(SourceMode.LIQUID));
     }
 
@@ -252,7 +253,7 @@ class SourceSchedulerTest {
 
         assertEquals(List.of(0, 3, 6, 9), boostTicks(intervals(2, 3, 5), access, 0, 9, true));
         assertEquals(4, access.payments(SourceMode.LIQUID));
-        assertEquals(1, access.checks(SourceMode.JAR));
+        assertEquals(0, access.checks(SourceMode.JAR));
         assertEquals(0, access.attempts(SourceMode.JAR));
     }
 
@@ -274,17 +275,17 @@ class SourceSchedulerTest {
     void returnsAuthorizedModeForTiesSwitchingAndFailedPayment() {
         CountingAccess access = new CountingAccess(SourceMode.GAS, SourceMode.LIQUID, SourceMode.JAR);
         SourceSettings settings = intervals(5, 5, 5);
-        assertEquals(SourceMode.GAS, scheduler.tick(state, settings, true, access));
+        assertEquals(SourceMode.GAS, scheduler.tick(state, settings, true, access).mode());
         access.funded.remove(SourceMode.GAS);
         for (int tick = 1; tick < 5; tick++) {
             org.junit.jupiter.api.Assertions.assertNull(scheduler.tick(state, settings, true, access));
         }
-        assertEquals(SourceMode.LIQUID, scheduler.tick(state, settings, true, access));
+        assertEquals(SourceMode.LIQUID, scheduler.tick(state, settings, true, access).mode());
         access.funded.remove(SourceMode.LIQUID);
         for (int tick = 6; tick < 10; tick++) {
             org.junit.jupiter.api.Assertions.assertNull(scheduler.tick(state, settings, true, access));
         }
-        assertEquals(SourceMode.JAR, scheduler.tick(state, settings, true, access));
+        assertEquals(SourceMode.JAR, scheduler.tick(state, settings, true, access).mode());
         var failedState = new SourceState();
         access.funded.add(SourceMode.GAS);
         access.failPayments.add(SourceMode.GAS);
@@ -294,7 +295,46 @@ class SourceSchedulerTest {
 
     private SourceSettings intervals(int jar, int liquid, int gas) {
         return new SourceSettings(2000, 80, 100, jar, 3,
-                new SourceSettings.ModeSettings(250, liquid), new SourceSettings.ModeSettings(125, gas), defaults.jarGrowth(), defaults.liquidGrowth(), defaults.gasGrowth());
+                mode(250, liquid), mode(125, gas), defaults.jarGrowth(), 16);
+    }
+
+    private SourceSettings.ModeSettings mode(long cost, int interval) {
+        return new SourceSettings.ModeSettings(cost, cost, java.util.Collections.nCopies(4,
+                new SourceSettings.TierSettings(interval, defaults.jarGrowth())));
+    }
+
+    @Test void masksSelectAggregateTierAndOnlyPaySelectedResource() {
+        var access = new CountingAccess(SourceMode.GAS, SourceMode.LIQUID);
+        access.gasMask = 7;
+        access.liquidMask = 15;
+        var boost = scheduler.tick(state, defaults, true, access);
+        assertEquals(new SourceScheduler.Boost(SourceMode.GAS, 7, defaults.gas().tier(3)), boost);
+        assertEquals(7, access.paidMask);
+        assertEquals(0, access.attempts(SourceMode.LIQUID));
+        access.gasMask = 1;
+        assertEquals(defaults.gas().tier(1), scheduler.tick(state, defaults, true, access).tier());
+    }
+
+    @Test void fallbackRetainsSlowerGasCooldown() {
+        var access = new CountingAccess(SourceMode.GAS, SourceMode.LIQUID);
+        var settings = intervals(10, 1, 9);
+        assertEquals(SourceMode.GAS, scheduler.tick(state, settings, true, access).mode());
+        access.funded.remove(SourceMode.GAS);
+        for (int remaining = 8; remaining > 0; remaining--) {
+            assertNull(scheduler.tick(state, settings, true, access));
+            assertEquals(remaining, state.boostCooldownTicks());
+            assertEquals(0, access.attempts(SourceMode.LIQUID));
+        }
+        assertEquals(SourceMode.LIQUID, scheduler.tick(state, settings, true, access).mode());
+        assertEquals(1, access.payments(SourceMode.LIQUID));
+    }
+
+    @Test void failedBatchDoesNotStartCooldownOrFallback() {
+        var access = new CountingAccess(SourceMode.GAS, SourceMode.LIQUID);
+        access.failPayments.add(SourceMode.GAS);
+        assertNull(scheduler.tick(state, defaults, true, access));
+        assertEquals(0, state.boostCooldownTicks());
+        assertEquals(0, access.attempts(SourceMode.LIQUID));
     }
 
     private List<Integer> boostTicks(SourceSettings settings, CountingAccess access,
@@ -319,14 +359,21 @@ class SourceSchedulerTest {
             funded.addAll(List.of(modes));
         }
 
-        @Override
-        public boolean canPay(SourceMode mode) {
+        private int gasMask = 1;
+        private int liquidMask = 1;
+        private int paidMask;
+        @Override public int fundedSideMask(SourceMode mode) {
+            return funded.contains(mode) ? (mode == SourceMode.GAS ? gasMask : liquidMask) : 0;
+        }
+        @Override public boolean pay(SourceMode mode, int sideMask) { paidMask = sideMask; return payment(mode); }
+        @Override public boolean canPayJar() { return canPay(SourceMode.JAR); }
+        @Override public boolean payJar() { return payment(SourceMode.JAR); }
+        private boolean canPay(SourceMode mode) {
             checks.merge(mode, 1, Integer::sum);
             return funded.contains(mode);
         }
 
-        @Override
-        public boolean pay(SourceMode mode) {
+        private boolean payment(SourceMode mode) {
             attempts.merge(mode, 1, Integer::sum);
             if (!funded.contains(mode) || failPayments.contains(mode)) {
                 return false;

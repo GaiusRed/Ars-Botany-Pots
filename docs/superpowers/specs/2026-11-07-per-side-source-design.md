@@ -1,6 +1,6 @@
 # Per-side Source buffers and configurable growth tiers
 
-Status: Approved by the user on 2026-11-07, including bounded multiple harvests and preservation of active pot recipe requirements. Implementation planning requested; no implementation or balance measurements yet.
+Status: Approved by the user on 2026-11-07, including bounded multiple harvests and preservation of active pot recipe requirements. Implemented and automated-verified on 2026-11-07; development-client startup/shutdown verified. Interactive gameplay, installed-pack checks and user balance measurements remain pending.
 
 ## Intent and scope
 
@@ -70,6 +70,8 @@ For a liquid/gas purchase:
 6. Spend the purchased growth through the same harvest loop, using the tick's remaining harvest allowance. Retain exact unused credit for later cycles or ticks.
 
 All payments in the batch use internal storage and succeed together. Plan before mutation; an ineligible or unfunded operation consumes nothing and does not reroll purchased growth. The tier is based on funded faces at purchase time, not pipe count or recent throughput. All funded faces participate, avoiding a direction preference.
+
+Final-review clarification (2026-11-07): a positive paid residual too small to advance native float progress may receive the next scheduled boost. Add that purchase to the residual; never discard or overwrite it. This narrow exception to exhausting credit before payment keeps the shared cooldown and one-purchase-per-tick limit. Invalid or blocked growth still prevents refill/payment, and credit sufficient to complete the current cycle must be spent before considering another purchase.
 
 Example: three liquid buffers each hold 500 mB and the fourth holds 200 mB. With a 500 mB cost, the pot spends 1,500 mB total and buys tier 3. The fourth buffer keeps its 200 mB. If gas can fund a purchase, no liquid is consumed.
 

@@ -1,6 +1,6 @@
 # Optional Source integrations
 
-Verified on 2026-11-03 with Java 21, Minecraft 1.21.1 and NeoForge 21.1.250. Dependency versions remain pinned to the [compatibility baseline](../compatibility.md).
+Dependency versions remain pinned to the [compatibility baseline](../compatibility.md): Java 21, Minecraft 1.21.1 and NeoForge 21.1.250. Current results are recorded below; the 2026-11-03 results remain under their historical heading.
 
 ## Required and optional resources
 
@@ -12,11 +12,23 @@ Mekanism storage and capability registration are isolated in compatibility class
 
 ## Saved buffers
 
-Unavailable liquid and gas retain their numeric saved amounts, clamped to configured capacity. They cannot accept, pull or spend resources, and expose no corresponding block capability. A later load with the integration available restores the retained amount into native storage. Existing native capability handlers retain their identity when live NBT is loaded.
+Unavailable liquid and gas retain numeric amounts independently for north, east, south and west, clamped to configured per-face capacity. They cannot accept, pull or spend resources, and expose no corresponding block capability. A later load with the integration available restores the retained amounts into native storage. Existing native capability handlers retain their identity when live NBT is loaded; the current regression changes live amounts before restoring and checks the cached views.
 
-All 61 variants, recipes, config keys and defaults remain unchanged. The full native suite covers growth, harvests, overflow, the harvest-pause bypass, scheduling and shared six-face input behavior.
+All 61 variants and crafting recipes remain unchanged. The per-face revision replaces shared Source config keys and saved state; see [operation and defaults](../../README.md#defaults). Horizontal faces have separate input-only handlers. Vertical and unsided Source capabilities are absent. Bottom item extraction remains inherited. Buffers may refill while a higher-priority resource is selected, but suppressed resources cannot pay or boost.
 
-## Automated checks
+## Current automated checks (2026-11-07)
+
+After the final precision fix, `./gradlew.bat test runCoreGameTestServer runFluidGameTestServer runMekanismGameTestServer runGameTestServer build --console=plain` passed in 1m 45s with process-local JDK 21. Each smoke profile passed all 5 required tests; the full profile passed all 104, for 119 native tests total. All 34 unit tests freshly passed against the final production code with zero failures/errors/skips; the matrix reused those results. These include `OptionalApiLoadingTest`, which rejects optional API packages while linking core storage. Smoke source has no Mekanism imports and uses real sided fluid block capabilities; its mod/classloader assertions check which jars are actually absent.
+
+Coverage includes fixed mixed-resource priority, partial higher-priority buffers, Jar suppression/expiry/fallback, all funded face counts, exact batch payments, capacity reductions, directional dormant quantities and live cached views after changed quantities are restored. Tests also exercise bounded harvests and active recipe growth/soil/tool/callback behavior. See [gameplay verification](ars-botany-pots.md#current-revision-per-face-source-and-bounded-harvests-2026-11-07) for operating rules, artifacts and limits.
+
+Evidence: `.superpowers/sdd/2026-11-07-per-side-source/final-fix-matrix.log`, `final-fix-artifacts.json` and `final-fix-report.md`; fresh unit execution is in `final-fix-green.log`. Both jars contain 310 JSON resources, with no test code/metadata, nested jars or bundled optional mods. Guarded compatibility code belongs to this mod and remains packaged. Build configuration, dependency pins and data inputs are unchanged; datagen was not repeated.
+
+Before the server-side arithmetic fix, `runFullClient` opened a responsive client and initialized resources/audio, then exited 0 after the agent's scoped graceful close (`task-3-client.log`). Client startup was not repeated for that fix. No world was opened. Actual pipe connections, rendering, two/four-face gameplay, fallback, harvest tools, bottom export and save/reopen remain unperformed for this revision because desktop interaction was unavailable. No CurseForge instance was supplied or modified. Historical user feedback below does not verify the replacement model.
+
+Passing logs still contain development refmap/Windows counter warnings, Ars Elemental glyph-description errors, the server breeze spawn-placement diagnostic and intentional invalid-recipe/capacity fixtures. The client also retains GeckoLib animation errors and dependency model/texture/sound/shader warnings. They are disclosed in the gameplay verification log findings. No unrelated dependency change was made to remove this noise.
+
+## Historical automated checks (2026-11-03)
 
 The first regression run failed with `NoClassDefFoundError: mekanism/api/chemical/IChemicalHandler` while linking `PotSourceAccess` through a classloader that rejects optional APIs. The same test passes after isolating those types. Its failing XML is retained at `.superpowers/sdd/2026-11-03-optional-source-integrations/optional-api-red.xml`.
 
@@ -35,7 +47,7 @@ The smoke checks cover registered pots, actual Jar-funded wheat harvests, unpowe
 
 Initial runs are recorded in `matrix-compile.log`, `matrix-core.log` and `matrix-optional-full.log` under `.superpowers/sdd/2026-11-03-optional-source-integrations/`.
 
-## Development profiles and remaining checks
+## Development profiles and historical remaining checks
 
 `runClient`, `runServer` and `runData` use the required gameplay mods and libraries. `runFullClient`, `runFullServer` and `runFullData` use the pinned full integration runtime. JEI is a development tool on both client profiles only. Mekanism and StarbuncleMania are compile-only dependencies of production code. Optional mods are not bundled into the distributable.
 

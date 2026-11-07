@@ -82,17 +82,15 @@ public final class MatureWheatGameTests {
     }
 
     @GameTest(template="empty", batch="mature-wheat")
-    public static void sourceMaturesWithoutDelayAndHarvestsOnlyOnce(GameTestHelper h) {
+    public static void sourceHarvestsImmediatelyAndSpendsRemainderOnNextCycle(GameTestHelper h) {
         try(var ignored=new GrowthConfigFixture(600,600)) {
             var ars=ArsPotGameTests.pot(h);
             ars.updateGrowthTime(ars.getRequiredGrowthTicks()-22);
             h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).isEmpty(),"Near-mature crop accepts one operation");
-            registeredTick(h,ars);
-            h.assertTrue(ars.canHarvest() && outputs(ars).equals(new Counts(0,0)),"Paid growth reaches maturity; upstream harvest runs once on next tick");
             resetRandom(h,42); registeredTick(h,ars);
             var harvested=outputs(ars);
             h.assertTrue(harvested.wheat()==1 && harvested.seeds()>=1 && harvested.seeds()<=4,"Source mature harvest retains actual wheat loot");
-            h.assertTrue(ars.growthTime()==578,"Remaining 579 paid ticks advance the next cycle from upstream minus-one reset");
+            h.assertTrue(ars.growthTime()==578,"Remaining 579 paid ticks advance the next cycle immediately from upstream minus-one reset");
             registeredTick(h,ars);
             h.assertTrue(outputs(ars).equals(harvested) && ars.growthTime()==579,"Powered harvest resumes ordinary growth immediately without duplicate loot");
         }

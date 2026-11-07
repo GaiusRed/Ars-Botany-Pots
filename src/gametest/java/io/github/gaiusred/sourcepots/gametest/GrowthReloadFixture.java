@@ -47,6 +47,9 @@ final class GrowthReloadFixture {
         try {
             Files.createDirectories(directory.resolve("data/botanypots/recipe/minecraft/fertilizer"));
             Files.writeString(directory.resolve("pack.mcmeta"), "{\"pack\":{\"pack_format\":48,\"description\":\"Source Pots development reload fixture\"}}");
+            Path functions = directory.resolve("data/sourcepots/function");
+            Files.createDirectories(functions);
+            Files.writeString(functions.resolve("count_harvest.mcfunction"), "scoreboard players add #harvest sourcepots_harvest 1\n");
         } catch (IOException failure) {
             try {
                 deleteFixture(directory);
@@ -169,6 +172,9 @@ final class GrowthReloadFixture {
     }
 
     static void deleteFixture(Path directory) throws IOException {
+        Files.deleteIfExists(directory.resolve("data/sourcepots/function/count_harvest.mcfunction"));
+        Files.deleteIfExists(directory.resolve("data/sourcepots/function"));
+        Files.deleteIfExists(directory.resolve("data/sourcepots"));
         Path recipe = directory.resolve("data/botanypots/recipe/minecraft/fertilizer/bone_meal.json");
         Files.deleteIfExists(recipe);
         Files.deleteIfExists(directory.resolve("pack.mcmeta"));

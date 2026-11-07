@@ -12,7 +12,7 @@ final class GrowthTestSupport {
 
     static int growthAmount(BonemealGrowth growth, BotanyPotBlockEntity pot, ServerLevel level, SourceMode mode) {
         return growth.isEligible(pot, level)
-                ? growth.sampleGrowth(SourcePotsConfig.snapshot().growth(mode), level.random) : 0;
+                ? growth.sampleGrowth(SourcePotsConfig.snapshot().tier(mode, mode == SourceMode.JAR ? 0 : 1).growth(), level.random) : 0;
     }
 
     static boolean apply(BonemealGrowth growth, BotanyPotBlockEntity pot, int amount) {

@@ -194,12 +194,12 @@ public final class PotDataGameTests {
             jar.setSource(2500);
             ArsBotanyPotBlockEntity.tickPot(h.getLevel(), pot.getBlockPos(), pot.getBlockState(), pot);
             var liquid = new FluidStack(BuiltInRegistries.FLUID.get(ResourceLocation.parse("sauce:source_fluid")), 250);
-            pot.sourceAccess().fluidHandler().fill(liquid, FluidAction.EXECUTE);
+            pot.sourceAccess().fluidHandler(Direction.NORTH).fill(liquid, FluidAction.EXECUTE);
             var sourceGas = MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("starbunclemania:source_gas")).orElseThrow();
             var gas = new ChemicalStack(sourceGas, 100);
             MekanismTestAccess.chemical(pot.sourceAccess()).insertChemical(gas, Action.EXECUTE);
-            var power = pot.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots");
-            h.assertTrue(power.getLong("jar_remaining") == 100 && power.getLong("liquid") == 250 && power.getLong("gas") == 100,
+            var power = pot.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots_v2");
+            h.assertTrue(power.getLong("jar_remaining") == 100 && power.getCompound("buffers").getCompound("north").getLong("liquid") == 250 && power.getCompound("buffers").getCompound("north").getLong("gas") == 100,
                     "Fixture must have paid time and both filled buffers");
             h.getLevel().destroyBlock(h.absolutePos(pos), true);
             var drops = h.getLevel().getEntitiesOfClass(ItemEntity.class, new AABB(h.absolutePos(pos)).inflate(1));
@@ -219,8 +219,12 @@ public final class PotDataGameTests {
             h.assertTrue(result.consumesAction() && h.getBlockEntity(target) instanceof ArsBotanyPotBlockEntity,
                     "Dropped item must place its matching pot");
             var fresh = (ArsBotanyPotBlockEntity) h.getBlockEntity(target);
-            var empty = fresh.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots");
-            for (String key : List.of("liquid", "gas", "jar_remaining", "jar_retry", "boost_cooldown")) {
+            var empty = fresh.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots_v2");
+            for(Direction side:Direction.Plane.HORIZONTAL) {
+                var face=empty.getCompound("buffers").getCompound(side.getName());
+                h.assertTrue(face.getLong("liquid")==0 && face.getLong("gas")==0,"Replacement starts with empty directional resources");
+            }
+            for (String key : List.of("jar_remaining", "jar_retry", "boost_cooldown")) {
                 h.assertTrue(empty.getLong(key) == 0, "Replacement must start without power: " + key);
             }
             h.succeed();

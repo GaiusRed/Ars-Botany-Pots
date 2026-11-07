@@ -63,9 +63,9 @@ public final class ModContent {
         event.registerBlockEntity(Capabilities.ItemHandler.BLOCK, POT_ENTITY.get(),
                 (pot, side) -> side == Direction.DOWN ? new SidedInvWrapper(pot, Direction.DOWN) : null);
         event.registerBlockEntity(Capabilities.FluidHandler.BLOCK, POT_ENTITY.get(),
-                (pot, side) -> side != null && pot instanceof ArsBotanyPotBlockEntity ars && ars.sourceAccess() != null
+                (pot, side) -> side != null && side.getAxis().isHorizontal() && pot instanceof ArsBotanyPotBlockEntity ars && ars.sourceAccess() != null
                         && ars.sourceAccess().liquidAvailable()
-                        ? ars.sourceAccess().fluidHandler() : null);
+                        ? ars.sourceAccess().fluidHandler(side) : null);
         if (ModList.get().isLoaded("mekanism")) MekanismCompatibility.registerCapabilities(event);
     }
     private ModContent() {}
