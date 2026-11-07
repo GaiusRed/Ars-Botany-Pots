@@ -69,10 +69,22 @@ public final class BonemealGrowth {
                 || credit <= 0 || !canAdvance(pot)) {
             return credit;
         }
-        double needed = (double) pot.getRequiredGrowthTicks() - pot.growthTime();
-        double applied = Math.min(credit, needed);
-        pot.updateGrowthTime((float) (pot.growthTime() + applied));
-        return credit - applied;
+        double progress = pot.growthTime();
+        int required = pot.getRequiredGrowthTicks();
+        double needed = required - progress;
+        if (credit >= needed) {
+            // Maturity saturates at the effective requirement, even if its float marker rounds up.
+            float mature = required;
+            if (mature < (double) required) mature = Math.nextUp(mature);
+            pot.updateGrowthTime(mature);
+            return credit - needed;
+        }
+        float target = (float) (progress + credit);
+        // Partial growth must never round above its paid budget. Keep unrepresentable credit.
+        if (target - progress > credit) target = Math.nextDown(target);
+        if (target <= progress) return credit;
+        pot.updateGrowthTime(target);
+        return credit - (target - progress);
     }
 
     private static boolean canAdvance(BotanyPotBlockEntity pot) {

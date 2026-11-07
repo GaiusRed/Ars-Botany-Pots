@@ -1,6 +1,52 @@
 # Ars Botany Pots verification
 
-Recorded on 2026-11-03 (Asia/Singapore) for ATM10Aero 0.8.0.
+## ATM10 Aero rebalance (2026-11-07)
+
+The user's pack measurements showed excessive growth and unsustainable fluid consumption. This rebalance changes only the production defaults and their tier-list helper. Jar payment settings, resource priority, crop requirements and harvest logic remain unchanged. The [README](../../README.md#defaults) lists the replacement values.
+
+Fresh validation passed: 36 unit tests, 105 full-integration GameTests and five smoke GameTests in each of the core, liquid-only and Mekanism-without-Source-gas profiles. The build passed. Accounting and high-speed regression cases now use an explicit fast test profile; smoke tests retain the real defaults. A separate native test installs the complete production settings and runs each tier through 12,000 calls to the registered pot ticker, clearing outputs after each call.
+
+| Tier | Wheat in 12,000 ticks from empty progress | Resource consumed |
+| --- | ---: | ---: |
+| Jar | 24 | 375,000 Source |
+| Liquid, 1 face | 49 | 200,000 mB |
+| Liquid, 2 faces | 74 | 400,000 mB |
+| Liquid, 3 faces | 100 | 600,000 mB |
+| Liquid, 4 faces | 125 | 800,000 mB |
+| Gas, 1 face | 100 | 12,000 native units |
+| Gas, 2 faces | 135 | 24,000 native units |
+| Gas, 3 faces | 165 | 36,000 native units |
+| Gas, 4 faces | 200 | 48,000 native units |
+
+These are development-runtime wheat-on-dirt results, with continuously funded inputs. The user subsequently verified the growth rates in ATM10 Aero. No additional in-game consumption measurement is claimed. Whole-item counts depend on measurement phase; the corresponding steady averages are approximately 25, 50, 75, 100, 125, 100, 135, 165 and 200 wheat per ten minutes at 20 TPS.
+
+Liquid consumption is 16.67 mB/t per face, so a 25 mB/t condenser covers 1.5 faces. Gas consumption is one native unit/t per face, matching an unupgraded rotary condensentrator. Faster machine upgrades increase supply. Backups and command output are under the ignored `.superpowers/atm10-rebalance/` directory.
+
+The rebuilt jar and all 30 intended balance values were deployed to the user's CurseForge ATM10A 0.8.0 instance. Jar payment values and the harvest cap were preserved; no `ars test` serverconfig override was present. Built and deployed SHA-256 matched: `15ACADC5473C751E0D340F91A77A6C28B09169CBC5B1965544B84E2D030757FC`. CurseForge launched client PID 20740, the player joined, and the game world was visually confirmed with the existing machines and drawers. The final log check found two expected SourcePots warnings: saved buffers at (24, 1, 11) and (19, 1, 11) were clamped to the reduced capacities (liquid 1,000 mB, gas 60 units). No SourcePots errors were found. The game was left running; no blocks or inventories were edited by the agent. Existing buffer amounts may clamp to the reduced gas capacity on restoration, and any previously paid growth can affect the initial measurement window.
+
+## Current revision: per-face Source and bounded harvests (2026-11-07)
+
+The current operating rules and all nine default tiers are in the [README](../../README.md#defaults). Each horizontal face has independent liquid/gas storage. Only stored full payments count toward a tier. Gas > liquid > Jar priority is fixed; a purchase spends every funded face of the selected mode and samples aggregate growth once. Suppressed Jar timers expire without renewal. One cooldown and one purchase per real tick apply across modes.
+
+The native ticker runs once. Additional harvests spend retained paid credit and preserve the active crop recipe's growth requirement, soil modifiers, loot rolls, callbacks, tool wear, output insertion and native -1 progress reset. Partial growth charges only the float progress actually stored. Fractions too small to advance that progress remain paid credit and may combine with the next scheduled boost. `growth.maxHarvestsPerTick` defaults to 16 (1–256), counting native harvests too. Source still requires a supported positive matching Botany Pots bonemeal recipe. World-only Mystical Agriculture fertilizer flags are not added as separate restrictions.
+
+Configuration requires restart. The new per-face cost/capacity keys and eight independent liquid/gas tier sections replace the former shared settings. `sourcepots_v2` saves stable direction names, retained credit, Jar timers and shared cooldown. Previous Source-specific state is ignored and resets; inherited inventory/crop data remain. Missing providers retain dormant per-face amounts but expose no corresponding Source capability or funding. Reduced capacities clamp on restoration and log once for that restoration. Cached capability views stay attached.
+
+Allthemodium findings in the [approved design](../superpowers/specs/2026-11-07-per-side-source-design.md#crop-and-soil-behavior-findings-and-preservation) come from source research. The user's installed recipe, addon configuration, allowed soils and ATM10 Aero performance have not been checked. No CurseForge instance location or measurements were supplied, and no instance was modified.
+
+After the final precision fix, the Java 21 gate `./gradlew.bat test runCoreGameTestServer runFluidGameTestServer runMekanismGameTestServer runGameTestServer build --console=plain` exited 0: `BUILD SUCCESSFUL in 1m 45s`. All 119 required native tests passed: 5 core, 5 Sauce-only, 5 Mekanism-only (without Source gas) and 104 full-integration tests. The 97 existing full-integration cases remain; seven additions cover float rounding, scheduled residual top-ups, fractional conservation, maximum growth and bounded persistence. All 34 unit tests freshly passed against the final production code with zero failures, errors or skips; the final matrix reused that result. Evidence is under `.superpowers/sdd/2026-11-07-per-side-source/`: `final-fix-report.md`, `final-fix-green.log`, `final-fix-green-settled.log`, `final-fix-matrix.log` and `final-fix-artifacts.json`. The report records the failing regressions and the carried test updated for the larger save bound. The two earlier regression corrections remain: vertical pulling faces fresh empty buffers, and live restore changes quantities before checking cached views.
+
+The runtime jar is 184,631 bytes, SHA-256 `6db7bf301302c07c747d9a536b79aecc4f2b214d9d9afd4e81ffa90c0f29081c`; the sources jar is 144,150 bytes, SHA-256 `7cf4420576a1ad852dba4042b0513b63b152c4182b670044471156fff42f6884`. Each contains 310 JSON resources. Neither contains GameTest/smoke classes, test-mod metadata, nested jars, cache entries or bundled dependency packages. The mod's guarded optional compatibility classes remain included. No generated asset inputs changed, so datagen was not repeated.
+
+Before the server-side arithmetic fix, `./gradlew.bat runFullClient --console=plain` opened responsive PID 2736, title `Minecraft NeoForge* 1.21.1`, window handle 14223500. Logs list the pinned optional mods plus JEI/MezzConfig, `mod/sourcepots` resource reload, OpenAL/audio and texture atlas initialization at 13:44:08 (Asia/Singapore). This existing development profile also lists `mod/sourcepots_gametest` during resource reload; it is absent from both distributed jars. The agent sent `CloseMainWindow()` only to the verified launched client at 13:44:32. It logged `Stopping!`; Gradle exited 0 with `BUILD SUCCESSFUL in 52s`, and that PID was absent afterward. Evidence: `task-3-client.log`, `task-3-client-latest.log` and the adjacent process/close JSON records. Client startup was not repeated for the arithmetic-only fix.
+
+No desktop viewing or gameplay control tool was available. No world was opened or edited. Actual horizontal pipes, rejected vertical pipe connections, two/four-face gameplay, suppression/fallback, rendering, harvest tools, bottom export and save/reopen remain unperformed for this revision. Server tests and a responsive window do not complete these checks. No installed-pack compatibility or balance result is claimed.
+
+The logs retain missing development refmaps, Windows performance-counter warnings, command ambiguities, eight Ars Elemental glyph-description errors and the server's missing breeze spawn-placement registration. The client also reports GeckoLib `adjust_size`/`swim_charge` parse errors, dependency model/texture warnings and sound/shader warnings. Intentional invalid-recipe and capacity-clamp fixtures log warnings in GameTests. Existing FML client annotation deprecations remain on recompilation. These diagnostics did not fail this gate; dependency pins and unrelated client code were not changed.
+
+## Historical evidence (2026-11-03)
+
+The results and artifact hashes below describe their named historical checkpoints for the ATM10Aero 0.8.0 baseline. Six-face/shared-buffer settings and one-harvest limits in those records were superseded by the 2026-11-07 revision; they are retained as historical evidence.
 
 The automated checks cover 81 required GameTests and 29 unit tests. Development server startup and clean shutdown passed. An actual Minecraft client window opened and a completed launch exited cleanly. The user confirmed in-game appearance and operation with all three Source inputs. The corrected client loaded JEI and MezzConfig and initialized JEI's runtime. Detailed manual scenarios, user confirmation of item filtering, and full-pack checks remain pending. Development runs load the source set; they do not prove that the assembled jar works in the full pack.
 
@@ -209,9 +255,9 @@ Use a new local creative world. Preserve existing worlds. Record the tested vari
 - [ ] Insert valid soil, wheat seeds, and a supported tree sapling. Check soil/crop/tree rendering, menu, harvest tool, all 15 inventory slots (soil, seed, tool, and 12 output/storage slots), hopper export, comparator, and waterlogging.
 - [ ] Compare empty-input growth and harvesting against an ordinary Hopper Botany Pot.
 - [ ] Test Jar-only input with a real Ars Source Jar: default 2,500 Source per payment, payment attempts have an 80-tick cooldown, 100-tick paid window, boosts every 10 ticks, radius 3 including diagonal positions; growth 600–800 ticks per boost. Confirm visible effects and behavior just beyond range.
-- [ ] Test liquid-only input with a real container and pipe using `sauce:source_fluid`: 500 mB per boost, 5-tick cadence, growth 500–700 ticks per boost, input-only buffer limited to one configured operation.
-- [ ] Test gas-only input with Mekanism storage and pipes using `starbunclemania:source_gas`: 250 units per boost, 1-tick cadence, growth 400–600 ticks per boost, separate input-only buffer limited to one configured operation.
-- [ ] Test both buffers and a Jar together. Confirm default gas/liquid/Jar priority, one boost at a time, six-face liquid/gas connections, and no diagonal pipe connection.
+- [ ] Test liquid-only input with real containers/pipes using `sauce:source_fluid`: north/east/south/west only, 500 mB per funded face, default capacity 500 mB per face. Compare two and four funded faces against the README's aggregate growth tiers; partial or empty connected faces must not contribute.
+- [ ] Test gas-only input with Mekanism storage/pipes using `starbunclemania:source_gas`: north/east/south/west only, 250 native units per funded face, default capacity 250 per face. Compare two and four funded faces. Reject top/bottom/unsided Source inputs while retaining bottom item export.
+- [ ] Test both resources and a Jar together. Confirm fixed gas/liquid/Jar priority, one purchase per tick, suppression without Jar renewal, expiry/fallback with the shared cooldown, and no diagonal pipe connection.
 - [ ] Remove/change crops, use invalid soil, block harvesting, and reach maturity or fill a retained growth bank. Check that no supplier drains while growth is ineligible. Use automated tick-counter tests for exact timing; visual observation alone cannot measure tick cadence reliably.
 - [ ] Save and quit with both buffers populated and paid Jar time remaining. Reopen the world; check contents, no duplication/free boost, and continued unpowered hopper behavior.
 - [ ] Force the pot's actual chunk to unload while buffers and paid Jar time remain, then reload it. Record evidence of the chunk lifecycle and check that elapsed unloaded time causes no catch-up growth, resource spending, or timer advance.

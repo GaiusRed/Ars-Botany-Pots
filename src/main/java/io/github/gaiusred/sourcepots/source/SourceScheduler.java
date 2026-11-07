@@ -1,66 +1,34 @@
 package io.github.gaiusred.sourcepots.source;
 
 public final class SourceScheduler {
-    /**
-     * Expires existing timers first, then attempts payment and at most one boost.
-     * New timers retain their full interval on the purchase/boost tick, including tick zero.
-     */
-    public SourceMode tick(SourceState state, SourceSettings settings, boolean growthEligible, SourceAccess access) {
+    public record Boost(SourceMode mode, int sideMask, SourceSettings.TierSettings tier) {}
+
+    /** Advances real-tick timers once, then authorizes at most one aggregate boost. */
+    public Boost tick(SourceState state, SourceSettings settings, boolean growthEligible, SourceAccess access) {
         state.advanceTimers();
-        if (!growthEligible) {
-            return null;
-        }
+        if (!growthEligible) return null;
 
-        SourceMode selected = null;
-        for (SourceMode mode : SourceMode.values()) {
-            if ((selected == null || interval(mode, settings) < interval(selected, settings))
-                    && checkFunding(mode, state, settings, access)) {
-                selected = mode;
+        int mask = access.fundedSideMask(SourceMode.GAS);
+        SourceMode selected = SourceMode.GAS;
+        if (mask == 0) {
+            mask = access.fundedSideMask(SourceMode.LIQUID);
+            selected = SourceMode.LIQUID;
+        }
+        if (mask == 0) {
+            selected = SourceMode.JAR;
+            if (state.jarRetryCooldownTicks == 0) {
+                state.jarRetryCooldownTicks = settings.jarPaymentIntervalTicks();
+                if (state.jarRemainingTicks > 0 || access.canPayJar()) {
+                    if (access.payJar()) state.jarRemainingTicks = settings.jarPoweredDurationTicks();
+                }
             }
+            if (state.jarRemainingTicks == 0) return null;
         }
-        if (selected == null) {
-            return null;
-        }
+        if (state.boostCooldownTicks > 0) return null;
 
-        if (selected == SourceMode.JAR && state.jarRetryCooldownTicks == 0) {
-            state.jarRetryCooldownTicks = settings.jarPaymentIntervalTicks();
-            if (access.pay(SourceMode.JAR)) {
-                state.jarRemainingTicks = settings.jarPoweredDurationTicks();
-            }
-        }
-        if (state.boostCooldownTicks > 0) {
-            return null;
-        }
-
-        boolean paid = selected == SourceMode.JAR ? state.jarRemainingTicks > 0 : access.pay(selected);
-        if (paid) {
-            state.boostCooldownTicks = interval(selected, settings);
-        }
-        return paid ? selected : null;
-    }
-
-    private boolean checkFunding(SourceMode mode, SourceState state, SourceSettings settings, SourceAccess access) {
-        if (mode != SourceMode.JAR) {
-            return access.canPay(mode);
-        }
-        if (state.jarRemainingTicks > 0) {
-            return true;
-        }
-        if (state.jarRetryCooldownTicks > 0) {
-            return false;
-        }
-        if (access.canPay(mode)) {
-            return true;
-        }
-        state.jarRetryCooldownTicks = settings.jarPaymentIntervalTicks();
-        return false;
-    }
-
-    private int interval(SourceMode mode, SourceSettings settings) {
-        return switch (mode) {
-            case GAS -> settings.gas().intervalTicks();
-            case LIQUID -> settings.liquid().intervalTicks();
-            case JAR -> settings.jarBoostIntervalTicks();
-        };
+        var tier = settings.tier(selected, Integer.bitCount(mask));
+        if (selected != SourceMode.JAR && !access.pay(selected, mask)) return null;
+        state.boostCooldownTicks = tier.intervalTicks();
+        return new Boost(selected, mask, tier);
     }
 }

@@ -62,10 +62,14 @@ public final class OptionalRuntimeSmokeTests {
         h.setBlock(CENTER.above(2), BuiltInRegistries.BLOCK.get(ResourceLocation.parse("ars_nouveau:source_jar")));
         var jar = (SourceJarTile) h.getBlockEntity(CENTER.above(2));
         jar.setSource(2500);
-        h.assertTrue(pot.sourceAccess().canPay(SourceMode.JAR), "Ars Jar source must be available without optional mods");
-        for (int i = 0; i < 100; i++) tick(h, pot);
+        h.assertTrue(pot.sourceAccess().canPayJar(), "Ars Jar source must be available without optional mods");
+        tick(h, pot);
+        h.assertTrue(jar.getSource() == 0, "First payment must consume exactly 2500 Source");
+        for (int i = 1; i < 600; i++) {
+            jar.setSource(2500);
+            tick(h, pot);
+        }
         var chest = (ChestBlockEntity) h.getBlockEntity(CENTER.below());
-        h.assertTrue(jar.getSource() == 0, "Jar must pay exactly the default 2500 Source");
         h.assertTrue(!chest.isEmpty(), "Real registered pot must harvest wheat into its chest with Jar power");
         h.succeed();
     }
@@ -76,7 +80,7 @@ public final class OptionalRuntimeSmokeTests {
         float before = pot.growthTime();
         for (int i = 0; i < 20; i++) tick(h, pot);
         h.assertTrue(pot.growthTime() > before, "Unpowered real pot must continue normal crop growth");
-        h.assertTrue(!pot.sourceAccess().canPay(SourceMode.GAS), "Missing Source gas provider must disable gas payments");
+        h.assertTrue(!(pot.sourceAccess().fundedSideMask(SourceMode.GAS) != 0), "Missing Source gas provider must disable gas payments");
         h.succeed();
     }
 
@@ -84,21 +88,32 @@ public final class OptionalRuntimeSmokeTests {
     public static void buffersSurviveLoadWithMissingProviders(GameTestHelper h) {
         var pot = pot(h);
         var saved = pot.saveWithoutMetadata(h.getLevel().registryAccess());
-        var power = saved.getCompound("sourcepots");
-        power.putLong("liquid", 450);
-        power.putLong("gas", 200);
+        var power = saved.getCompound("sourcepots_v2");
+        var buffers=new CompoundTag();
+        int index=1;
+        for(Direction side:Direction.Plane.HORIZONTAL) {
+            var face=new CompoundTag();
+            face.putLong("liquid",index*100);
+            face.putLong("gas",index*10);
+            buffers.put(side.getName(),face);
+            index++;
+        }
+        power.put("buffers",buffers);
         var restored = new ArsBotanyPotBlockEntity(pot.getBlockPos(), pot.getBlockState());
         restored.loadAdditional(saved, h.getLevel().registryAccess());
-        h.assertTrue(restored.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots").equals(power),
-                "Saving before level attachment must preserve source data");
+        h.assertTrue(restored.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots_v2").equals(power),
+                "Saving before level attachment preserves directional data");
         restored.setLevel(h.getLevel());
-        h.assertTrue(restored.sourceAccess().storedLiquid() == 450 && restored.sourceAccess().storedGas() == 200,
-                "Both numeric buffers must survive absent resource registries");
-        h.assertTrue(!restored.sourceAccess().canPay(SourceMode.GAS), "Dormant gas must not pay without its provider");
-        h.assertTrue(!restored.sourceAccess().canPay(SourceMode.LIQUID), "Partial or dormant liquid must not pay");
-        var resaved = restored.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots");
-        h.assertTrue(resaved.getLong("liquid") == 450 && resaved.getLong("gas") == 200,
-                "Saving after level attachment must preserve both numeric buffers");
+        index=1;
+        for(Direction side:Direction.Plane.HORIZONTAL) {
+            h.assertTrue(restored.sourceAccess().storedLiquid(side)==index*100 && restored.sourceAccess().storedGas(side)==index*10,
+                    "Each directional quantity survives missing providers");
+            index++;
+        }
+        h.assertTrue(restored.sourceAccess().fundedSideMask(SourceMode.GAS)==0 && restored.sourceAccess().fundedSideMask(SourceMode.LIQUID)==0,
+                "Dormant or partial quantities cannot fund growth");
+        h.assertTrue(restored.saveWithoutMetadata(h.getLevel().registryAccess()).getCompound("sourcepots_v2").equals(power),
+                "Saving after level attachment preserves all quantities");
         h.succeed();
     }
 
@@ -118,20 +133,25 @@ public final class OptionalRuntimeSmokeTests {
             h.assertTrue(h.getLevel().getCapability(blockCapability, pot.getBlockPos(), Direction.NORTH) == null,
                     "Native chemical capability must stay absent with Mekanism but no Source gas");
         }
+        for(Direction side:Direction.values()) {
+            var view=h.getLevel().getCapability(Capabilities.FluidHandler.BLOCK,pot.getBlockPos(),side);
+            h.assertTrue((view!=null)==(fluidProfile() && side.getAxis().isHorizontal()),"Fluid capability follows horizontal provider availability");
+        }
+        h.assertTrue(h.getLevel().getCapability(Capabilities.FluidHandler.BLOCK,pot.getBlockPos(),null)==null,"Unsided Source absent");
         if (fluidProfile()) {
             var source = BuiltInRegistries.FLUID.get(ResourceLocation.parse("sauce:source_fluid"));
-            h.assertTrue(fluidHandler.fill(new FluidStack(source, 499), FluidAction.EXECUTE) == 499,
+            h.assertTrue(fluidHandler.fill(new FluidStack(source, 999), FluidAction.EXECUTE) == 999,
                     "Source fluid must fill without StarbuncleMania or Mekanism");
-            h.assertTrue(!access.canPay(SourceMode.LIQUID), "Default liquid cost is 500 mB");
+            h.assertTrue(!(access.fundedSideMask(SourceMode.LIQUID) != 0), "Default liquid cost is 1000 mB");
             h.assertTrue(fluidHandler.fill(new FluidStack(source, 1), FluidAction.EXECUTE) == 1,
                     "Final mB must fill the default liquid buffer");
-            h.assertTrue(access.canPay(SourceMode.LIQUID) && access.pay(SourceMode.LIQUID),
-                    "Exactly 500 mB must pay for a liquid boost");
-            h.assertTrue(access.storedLiquid() == 0, "A liquid payment must consume exactly 500 mB");
-            fluidHandler.fill(new FluidStack(source, 500), FluidAction.EXECUTE);
+            h.assertTrue((access.fundedSideMask(SourceMode.LIQUID) != 0) && access.pay(SourceMode.LIQUID, 1 << Direction.NORTH.get2DDataValue()),
+                    "Exactly 1000 mB must pay for a liquid boost");
+            h.assertTrue(access.storedLiquid(Direction.NORTH) == 0, "A liquid payment must consume exactly 1000 mB");
+            fluidHandler.fill(new FluidStack(source, 1000), FluidAction.EXECUTE);
             float before = pot.growthTime();
             tick(h, pot);
-            h.assertTrue(pot.growthTime() - before >= 500 && access.storedLiquid() == 0,
+            h.assertTrue(pot.growthTime() - before >= 240 && access.storedLiquid(Direction.NORTH) == 0,
                     "A real Source-fluid payment must power the pot ticker without Mekanism or StarbuncleMania");
         }
         h.succeed();

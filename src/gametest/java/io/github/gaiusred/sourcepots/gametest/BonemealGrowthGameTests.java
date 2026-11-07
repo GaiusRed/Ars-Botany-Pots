@@ -44,6 +44,23 @@ public final class BonemealGrowthGameTests {
     private static final ResourceLocation BONE_MEAL = ResourceLocation.parse("botanypots:minecraft/fertilizer/bone_meal");
 
     @GameTest(template = "empty", batch = "growth")
+    public static void nonBinaryFractionsConserveActualStoredGrowth(GameTestHelper helper) {
+        var pot = pot(helper);
+        float[] starts = {10, 10.2f, 99.9f};
+        double[] budgets = {0.1, 0.2, 0.05};
+        for (int i = 0; i < starts.length; i++) {
+            pot.updateGrowthTime(starts[i]);
+            double remaining = GROWTH.applyEligibleCredit(pot, budgets[i]);
+            double applied = (double) pot.growthTime() - starts[i];
+            helper.assertTrue(applied > 0 && applied <= budgets[i],
+                    "Stored fractional growth must advance without exceeding the paid budget: " + i);
+            helper.assertTrue(remaining == budgets[i] - applied && remaining > 0,
+                    "The exact unrepresentable fraction must remain paid credit: " + i);
+        }
+        helper.succeed();
+    }
+
+    @GameTest(template = "empty", batch = "growth")
     public static void sourceJarDefaultsAdd600To800(GameTestHelper helper) {
         var pot = pot(helper);
         int amount = GrowthTestSupport.growthAmount(GROWTH, pot, helper.getLevel(), io.github.gaiusred.sourcepots.source.SourceMode.JAR);
@@ -232,8 +249,10 @@ public final class BonemealGrowthGameTests {
         helper.assertTrue(amount == 0, "Missing, unsupported, or nonpositive recipe must return zero, got " + amount);
         int[] balance = {1000};
         SourceAccess access = new SourceAccess() {
-            public boolean canPay(SourceMode mode) { return true; }
-            public boolean pay(SourceMode mode) { balance[0] -= 125; return true; }
+            public int fundedSideMask(SourceMode mode) { return 1; }
+            public boolean canPayJar() { return true; }
+            public boolean payJar() { balance[0] -= 125; return true; }
+            public boolean pay(SourceMode mode, int sideMask) { balance[0] -= 125; return true; }
         };
         helper.assertTrue(new SourceScheduler().tick(new SourceState(), SourceSettings.defaults(), amount > 0, access) == null, "Ineligible growth must not authorize boost");
         helper.assertTrue(balance[0] == 1000 && pot.growthTime() == 0, "Ineligible recipe must preserve Source and growth");

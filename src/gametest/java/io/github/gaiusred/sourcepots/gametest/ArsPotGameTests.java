@@ -74,9 +74,9 @@ public final class ArsPotGameTests {
             var restored=new ArsBotanyPotBlockEntity(ars.getBlockPos(),ars.getBlockState());
             restored.loadAdditional(nbt,h.getLevel().registryAccess()); // Real chunk load has no level yet.
             var deferred=restored.saveWithoutMetadata(h.getLevel().registryAccess());
-            h.assertTrue(deferred.getCompound("sourcepots").equals(nbt.getCompound("sourcepots")),"Save before setLevel must retain deferred power");
+            h.assertTrue(deferred.getCompound("sourcepots_v2").equals(nbt.getCompound("sourcepots_v2")),"Save before setLevel must retain deferred power");
             restored.setLevel(h.getLevel());
-            h.assertTrue(restored.sourceAccess().fluidHandler().getFluidInTank(0).getAmount()==500 && MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==250,"Both buffers must survive chunk load");
+            h.assertTrue(restored.sourceAccess().fluidHandler(Direction.NORTH).getFluidInTank(0).getAmount()==500 && MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==250,"Both buffers must survive chunk load");
             h.assertTrue(power(restored).equals(power(ars)) && restored.growthTime()==ars.growthTime(),"Timers and upstream growth must survive load");
             restored.setSeed(ItemStack.EMPTY);
             var inactive=restored.saveWithoutMetadata(h.getLevel().registryAccess()); restored.loadAdditional(inactive,h.getLevel().registryAccess());
@@ -89,33 +89,36 @@ public final class ArsPotGameTests {
     public static void smallerConfiguredCapacityClampsSave(GameTestHelper h) {
         var ars=pot(h); fill(ars);
         var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
-        ModConfigSpec.IntValue liquid=SourcePotsConfig.SPEC.getValues().get("liquid.costMb");
-        ModConfigSpec.LongValue gas=SourcePotsConfig.SPEC.getValues().get("gas.costUnits");
+        ModConfigSpec.IntValue liquid=SourcePotsConfig.SPEC.getValues().get("liquid.bufferCapacityMbPerSide");
+        ModConfigSpec.IntValue liquidCost=SourcePotsConfig.SPEC.getValues().get("liquid.costMbPerSide");
+        ModConfigSpec.LongValue gas=SourcePotsConfig.SPEC.getValues().get("gas.bufferCapacityUnitsPerSide");
+        ModConfigSpec.LongValue gasCost=SourcePotsConfig.SPEC.getValues().get("gas.costUnitsPerSide");
         int oldLiquid=liquid.get(); long oldGas=gas.get();
         try {
-            liquid.set(100); gas.set(50L);
+            liquid.set(100); gas.set(50L); liquidCost.set(100); gasCost.set(50L); liquidCost.clearCache(); gasCost.clearCache();
             // These are world-restart settings; reproduce a fresh world's uncached snapshot.
             liquid.clearCache(); gas.clearCache();
             var restored=new ArsBotanyPotBlockEntity(ars.getBlockPos(),ars.getBlockState());
             restored.loadAdditional(saved,h.getLevel().registryAccess()); restored.setLevel(h.getLevel());
-            h.assertTrue(restored.sourceAccess().fluidHandler().getFluidInTank(0).getAmount()==100 && MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==50,"Reduced capacities must clamp saved resources");
-        } finally { liquid.set(oldLiquid); gas.set(oldGas); liquid.clearCache(); gas.clearCache(); }
+            h.assertTrue(restored.sourceAccess().fluidHandler(Direction.NORTH).getFluidInTank(0).getAmount()==100 && MekanismTestAccess.chemical(restored.sourceAccess()).getChemicalInTank(0).getAmount()==50,"Reduced capacities must clamp saved resources");
+        } finally { liquid.set(oldLiquid); gas.set(oldGas); liquidCost.set(500); gasCost.set(250L); liquid.clearCache(); gas.clearCache(); liquidCost.clearCache(); gasCost.clearCache(); }
         h.succeed();
     }
 
     @GameTest(template="empty", batch="ars-pots")
     public static void malformedAndOversizedSavedPowerIsBounded(GameTestHelper h) {
         var ars=pot(h); var nbt=ars.saveWithoutMetadata(h.getLevel().registryAccess()); var state=new CompoundTag();
-        state.putLong("liquid",Long.MAX_VALUE); state.putLong("gas",Long.MAX_VALUE);
-        state.putLong("jar_remaining",Long.MAX_VALUE); state.putLong("jar_retry",Long.MAX_VALUE); state.putLong("boost_cooldown",Long.MAX_VALUE); nbt.put("sourcepots",state);
+        face(state).putLong("liquid",Long.MAX_VALUE); face(state).putLong("gas",Long.MAX_VALUE);
+        state.putLong("jar_remaining",Long.MAX_VALUE); state.putLong("jar_retry",Long.MAX_VALUE); state.putLong("boost_cooldown",Long.MAX_VALUE); nbt.put("sourcepots_v2",state);
         ars.loadAdditional(nbt,h.getLevel().registryAccess());
         var bounded=power(ars);
-        h.assertTrue(bounded.getLong("liquid")==500 && bounded.getLong("gas")==250,"Oversized resources must saturate to one operation");
+        h.assertTrue(face(bounded).getLong("liquid")==500 && face(bounded).getLong("gas")==250,"Oversized resources must saturate to one operation");
         h.assertTrue(bounded.getLong("jar_remaining")==Integer.MAX_VALUE && bounded.getLong("jar_retry")==Integer.MAX_VALUE && bounded.getLong("boost_cooldown")==Integer.MAX_VALUE,"Long timers must saturate instead of wrapping");
-        state.putLong("liquid",-2); state.putString("gas","invalid"); state.putLong("jar_remaining",-1); state.putString("jar_retry","invalid"); state.remove("boost_cooldown");
+        face(state).putLong("liquid",-2); face(state).putString("gas","invalid"); state.putLong("jar_remaining",-1); state.putString("jar_retry","invalid"); state.remove("boost_cooldown");
         ars.loadAdditional(nbt,h.getLevel().registryAccess()); bounded=power(ars);
-        for(var key: new String[]{"liquid","gas","jar_remaining","jar_retry","boost_cooldown"}) h.assertTrue(bounded.getLong(key)==0,"Negative, malformed, and missing values default to zero: "+key);
-        nbt.remove("sourcepots"); ars.loadAdditional(nbt,h.getLevel().registryAccess()); h.assertTrue(power(ars).getLong("gas")==0,"Old saves start empty"); h.succeed();
+        for(var key: new String[]{"jar_remaining","jar_retry","boost_cooldown"}) h.assertTrue(bounded.getLong(key)==0,"Negative, malformed, and missing values default to zero: "+key);
+        h.assertTrue(face(bounded).getLong("liquid")==0 && face(bounded).getLong("gas")==0,"Malformed resources become zero");
+        nbt.put("sourcepots",state); nbt.remove("sourcepots_v2"); ars.loadAdditional(nbt,h.getLevel().registryAccess()); h.assertTrue(face(power(ars)).getLong("gas")==0,"Old saves start empty"); h.succeed();
     }
 
     @GameTest(template="empty", batch="ars-pots")
@@ -128,8 +131,8 @@ public final class ArsPotGameTests {
                 var fluid=h.getLevel().getCapability(Capabilities.FluidHandler.BLOCK,ars.getBlockPos(),side);
                 var gas=h.getLevel().getCapability(mekanism.common.capabilities.Capabilities.CHEMICAL.block(),ars.getBlockPos(),side);
                 var items=h.getLevel().getCapability(Capabilities.ItemHandler.BLOCK,ars.getBlockPos(),side);
-                h.assertTrue(fluid!=null && gas!=null,"Both independent inputs must exist on "+side);
-                h.assertTrue(fluid.getFluidInTank(0).isEmpty() && gas.getChemicalInTank(0).isEmpty(),"New variants cannot inherit another pot's resources");
+                h.assertTrue((fluid!=null)==side.getAxis().isHorizontal() && (gas!=null)==side.getAxis().isHorizontal(),"Only horizontal Source inputs exist on "+side);
+                if(side.getAxis().isHorizontal()) h.assertTrue(fluid.getFluidInTank(0).isEmpty() && gas.getChemicalInTank(0).isEmpty(),"New variants cannot inherit another pot's resources");
                 h.assertTrue((items!=null)==(side==Direction.DOWN),"Item automation must match upstream bottom-only extraction");
                 if(items!=null) {
                     ars.setItem(14,new ItemStack(Items.WHEAT,3));
@@ -143,17 +146,36 @@ public final class ArsPotGameTests {
     }
 
     @GameTest(template="empty", batch="ars-pots")
-    public static void liveNbtLoadKeepsCachedCapabilityViews(GameTestHelper h) {
-        var ars=pot(h); fill(ars);
-        var fluid=h.getLevel().getCapability(Capabilities.FluidHandler.BLOCK,ars.getBlockPos(),Direction.UP);
-        var gas=h.getLevel().getCapability(mekanism.common.capabilities.Capabilities.CHEMICAL.block(),ars.getBlockPos(),Direction.UP);
+    public static void liveNbtLoadKeepsEveryDirectionalCapabilityView(GameTestHelper h) {
+        var ars=pot(h);
+        var fluids=new java.util.EnumMap<Direction,net.neoforged.neoforge.fluids.capability.IFluidHandler>(Direction.class);
+        var gases=new java.util.EnumMap<Direction,mekanism.api.chemical.IChemicalHandler>(Direction.class);
+        int count=1;
+        for(Direction side:Direction.Plane.HORIZONTAL) {
+            var fluid=h.getLevel().getCapability(Capabilities.FluidHandler.BLOCK,ars.getBlockPos(),side);
+            var gas=h.getLevel().getCapability(mekanism.common.capabilities.Capabilities.CHEMICAL.block(),ars.getBlockPos(),side);
+            fluids.put(side,fluid); gases.put(side,gas);
+            fluid.fill(SourceAccessGameTests.fluid(count*100),FluidAction.EXECUTE);
+            gas.insertChemical(SourceAccessGameTests.gas(count*50),Action.EXECUTE);
+            count++;
+        }
         var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
-        saved.getCompound("sourcepots").putLong("liquid",40); saved.getCompound("sourcepots").putLong("gas",30);
+        for(Direction side:Direction.Plane.HORIZONTAL) {
+            fluids.get(side).fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE);
+            gases.get(side).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE);
+            h.assertTrue(fluids.get(side).getFluidInTank(0).getAmount()==500 && gases.get(side).getChemicalInTank(0).getAmount()==250,"Live quantities must differ from the saved partial buffers before restore");
+        }
         ars.loadAdditional(saved,h.getLevel().registryAccess());
-        h.assertTrue(fluid==ars.sourceAccess().fluidHandler() && gas==MekanismTestAccess.chemical(ars.sourceAccess()),"Loading live NBT must keep cached input capability identity");
-        h.assertTrue(fluid.getFluidInTank(0).getAmount()==40 && gas.getChemicalInTank(0).getAmount()==30,"Cached views must observe restored buffers");
-        fill(ars);
-        h.assertTrue(fluid.getFluidInTank(0).getAmount()==500 && gas.getChemicalInTank(0).getAmount()==250,"Cached views and current pot must share subsequent intake"); h.succeed();
+        count=1;
+        for(Direction side:Direction.Plane.HORIZONTAL) {
+            h.assertTrue(fluids.get(side)==ars.sourceAccess().fluidHandler(side) && gases.get(side)==((io.github.gaiusred.sourcepots.compat.mekanism.MekanismSourceStorage)ars.sourceAccess().gasStorage()).handler(side),"Live restore preserves each cached view");
+            h.assertTrue(fluids.get(side).getFluidInTank(0).getAmount()==count*100 && gases.get(side).getChemicalInTank(0).getAmount()==count*50,"Distinct per-face saved quantities survive");
+            fluids.get(side).fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE);
+            gases.get(side).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE);
+            h.assertTrue(ars.sourceAccess().storedLiquid(side)==500 && ars.sourceAccess().storedGas(side)==250,"Cached views remain attached after load");
+            count++;
+        }
+        h.succeed();
     }
 
     @GameTest(template="empty", batch="ars-pots")
@@ -172,15 +194,15 @@ public final class ArsPotGameTests {
 
     @GameTest(template="empty", batch="ars-integrated-input")
     public static void integratedTickPullsThenBuysAtMostOneBoost(GameTestHelper h) {
-        var ars=pot(h); var supplier=ResourceTestEnvironment.place(h,CENTER.below(),Direction.UP,false);
+        var ars=pot(h); var supplier=ResourceTestEnvironment.place(h,CENTER.north(),Direction.SOUTH,false);
         try {
             tick(h,ars);
             h.assertTrue(ars.growthTime()>=401 && ars.growthTime()<=601,"One server tick must pull and apply exactly one configured Source increment after natural growth");
             h.assertTrue(supplier.fluid.getFluidAmount()==500 && supplier.gas.getStored()==750,"Pulling fills one operation of each independent resource");
-            h.assertTrue(power(ars).getLong("liquid")==500 && power(ars).getLong("gas")==0 && power(ars).getLong("boost_cooldown")==1,"Faster gas wins once; liquid remains stored");
+            h.assertTrue(face(power(ars)).getLong("liquid")==500 && face(power(ars)).getLong("gas")==0 && power(ars).getLong("boost_cooldown")==1,"Faster gas wins once; liquid remains stored");
             ars.setSeed(ItemStack.EMPTY); tick(h,ars);
-            h.assertTrue(supplier.fluid.getFluidAmount()==500 && supplier.gas.getStored()==750 && power(ars).getLong("liquid")==500,"Ineligible crops stop intake and spending while preserving saved liquid");
-        } finally { ResourceTestEnvironment.remove(h,CENTER.below()); }
+            h.assertTrue(supplier.fluid.getFluidAmount()==500 && supplier.gas.getStored()==750 && face(power(ars)).getLong("liquid")==500,"Ineligible crops stop intake and spending while preserving saved liquid");
+        } finally { ResourceTestEnvironment.remove(h,CENTER.north()); }
         h.succeed();
     }
 
@@ -194,7 +216,7 @@ public final class ArsPotGameTests {
         GrowthReloadFixture.runWithReloadAssertion(h,new io.github.gaiusred.sourcepots.growth.BonemealGrowth(),detached,()->{
             long cooldown=power(detached).getLong("boost_cooldown");
             float growth=detached.growthTime(); tick(h,detached);
-            h.assertTrue(cooldown>0 && power(detached).getLong("boost_cooldown")==cooldown-1 && power(detached).getLong("gas")==250 && detached.growthTime()==growth+1,"Real datapack reload cannot reset shared cooldown or purchase an extra boost");
+            h.assertTrue(cooldown>0 && power(detached).getLong("boost_cooldown")==cooldown-1 && face(power(detached)).getLong("gas")==250 && detached.growthTime()==growth+1,"Real datapack reload cannot reset shared cooldown or purchase an extra boost");
         });
     }
 
@@ -247,10 +269,10 @@ public final class ArsPotGameTests {
         ars.setHoe(new ItemStack(Items.IRON_HOE)); ars.setItem(14,new ItemStack(Items.WHEAT,7));
         h.setBlock(CENTER,Blocks.AIR);
         var drops=h.getLevel().getEntitiesOfClass(ItemEntity.class,new AABB(h.absolutePos(CENTER)).inflate(1));
-        h.assertTrue(drops.stream().map(ItemEntity::getItem).filter(s->s.is(Items.WHEAT)).mapToInt(ItemStack::getCount).sum()==7,"Breaking must drop output inventory");
+        h.assertTrue(drops.stream().map(ItemEntity::getItem).filter(s->s.is(Items.WHEAT)).mapToInt(ItemStack::getCount).sum()==23,"Breaking must drop sixteen harvested wheat plus seven inserted wheat");
         h.assertTrue(drops.stream().anyMatch(e->e.getItem().is(Items.DIRT)) && drops.stream().anyMatch(e->e.getItem().is(Items.WHEAT_SEEDS)) && drops.stream().anyMatch(e->e.getItem().is(Items.IRON_HOE)),"Breaking must also drop soil, seed, and tool");
         var fresh=pot(h); var state=power(fresh);
-        h.assertTrue(state.getLong("liquid")==0 && state.getLong("gas")==0 && state.getLong("jar_remaining")==0 && state.getLong("boost_cooldown")==0 && state.getDouble("growth_credit")==0 && !state.getBoolean("source_assisted"),"New placement must start with empty power and no paid growth"); h.succeed();
+        h.assertTrue(face(state).getLong("liquid")==0 && face(state).getLong("gas")==0 && state.getLong("jar_remaining")==0 && state.getLong("boost_cooldown")==0 && state.getDouble("growth_credit")==0 && !state.getBoolean("source_assisted"),"New placement must start with empty power and no paid growth"); h.succeed();
     }
 
     @GameTest(template="empty", batch="ars-unload", timeoutTicks=160)
@@ -265,7 +287,7 @@ public final class ArsPotGameTests {
             var restored=new ArsBotanyPotBlockEntity(ars.getBlockPos(),ars.getBlockState()); restored.loadAdditional(saved,h.getLevel().registryAccess()); restored.setLevel(h.getLevel());
             h.assertTrue(power(restored).equals(before),"Unloaded time must not change buffers or timers");
             float growth=restored.growthTime(); tick(h,restored);
-            h.assertTrue(restored.growthTime()==growth+1 && power(restored).getLong("boost_cooldown")==4 && power(restored).getLong("gas")==250,"Reloaded pot receives one ordinary tick and no catch-up or early payment"); h.succeed();
+            h.assertTrue(restored.growthTime()==growth+1 && power(restored).getLong("boost_cooldown")==4 && face(power(restored)).getLong("gas")==250,"Reloaded pot receives one ordinary tick and no catch-up or early payment"); h.succeed();
         });
     }
 
@@ -277,10 +299,10 @@ public final class ArsPotGameTests {
             var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
             var restored=new ArsBotanyPotBlockEntity(ars.getBlockPos(),ars.getBlockState()); restored.loadAdditional(saved,h.getLevel().registryAccess()); restored.setLevel(h.getLevel());
             float before=restored.growthTime(); tick(h,restored);
-            h.assertTrue(restored.growthTime()==before+1 && power(restored).getLong("gas")==250 && power(restored).getLong("boost_cooldown")==4,"Chunk reload must retain shared cooldown and avoid immediate extra boost");
+            h.assertTrue(restored.growthTime()==before+1 && face(power(restored)).getLong("gas")==250 && power(restored).getLong("boost_cooldown")==4,"Chunk reload must retain shared cooldown and avoid immediate extra boost");
             for(int i=0;i<3;i++)tick(h,restored);
-            h.assertTrue(power(restored).getLong("gas")==250,"Stored gas waits for the fifth tick");
-            tick(h,restored); h.assertTrue(power(restored).getLong("gas")==0 && restored.growthTime()==before+105,"Fifth tick must purchase exactly one new boost");
+            h.assertTrue(face(power(restored)).getLong("gas")==250,"Stored gas waits for the fifth tick");
+            tick(h,restored); h.assertTrue(face(power(restored)).getLong("gas")==0 && restored.growthTime()==before+105,"Fifth tick must purchase exactly one new boost");
         }
         h.succeed();
     }
@@ -293,11 +315,11 @@ public final class ArsPotGameTests {
             fillLiquid(ars);
             fill(ars);
             tick(h, ars);
-            h.assertTrue(ars.growthTime() == 58 && power(ars).getLong("gas") == 0
-                    && power(ars).getLong("liquid") == 500 && sourceJar.getSource() == 2500,
+            h.assertTrue(ars.growthTime() == 58 && face(power(ars)).getLong("gas") == 0
+                    && face(power(ars)).getLong("liquid") == 500 && sourceJar.getSource() == 2500,
                     "Simultaneous inputs must pay gas and apply only gas growth");
             tick(h, ars);
-            h.assertTrue(ars.growthTime() == 106 && power(ars).getLong("liquid") == 0
+            h.assertTrue(ars.growthTime() == 106 && face(power(ars)).getLong("liquid") == 0
                     && sourceJar.getSource() == 2500, "Exhausted gas switches to liquid growth");
             tick(h, ars);
             h.assertTrue(ars.growthTime() == 107 && sourceJar.getSource() == 0,
@@ -343,7 +365,7 @@ public final class ArsPotGameTests {
                         (mode == SourceMode.JAR ? 10 :
                                 mode == SourceMode.LIQUID ? 5 : 1),
                         "Configured growth must preserve mode cadence");
-                h.assertTrue(power(ars).getLong("liquid") == 0 && power(ars).getLong("gas") == 0,
+                h.assertTrue(face(power(ars)).getLong("liquid") == 0 && face(power(ars)).getLong("gas") == 0,
                         "The selected operation must spend its buffer");
                 if (mode == SourceMode.JAR) {
                     h.assertTrue(((com.hollingsworth.arsnouveau.common.block.tile.SourceJarTile)
@@ -383,10 +405,10 @@ public final class ArsPotGameTests {
                 else if (mode == SourceMode.LIQUID) fillLiquid(ars);
                 else MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250), Action.EXECUTE);
                 tick(h, ars);
-                h.assertTrue(ars.growthTime() >= ars.getRequiredGrowthTicks() && ars.canHarvest(),
-                        mode + " must reach maturity without a finishing delay");
-                h.assertTrue(power(ars).getDouble("growth_credit") == 2147483618d,
-                        "Maximum boost minus exactly 29 needed ticks must remain exact");
+                h.assertTrue(ars.growthTime() == -1 && wheatCount(ars) == 16,
+                        mode + " must complete sixteen bounded harvests immediately");
+                h.assertTrue(power(ars).getDouble("growth_credit") == 2147465603d,
+                        "Maximum boost minus 29 first-cycle ticks and fifteen 1201-tick cycles remains exact");
                 h.setBlock(CENTER.above(2), Blocks.AIR);
             }
         }
@@ -395,7 +417,7 @@ public final class ArsPotGameTests {
 
     @GameTest(template="empty", batch="source-overflow")
     public static void overflowPersistsAndFundsConsecutiveHarvestsWithoutRepayment(GameTestHelper h) {
-        try (var ignored = new GrowthConfigFixture(1000, 1000)) {
+        try (var ignored = new GrowthConfigFixture(1000, 1000).harvestLimit(1)) {
             var ars=pot(h);
             ars.updateGrowthTime(ars.getRequiredGrowthTicks()-301);
             MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE); tick(h,ars);
@@ -404,9 +426,9 @@ public final class ArsPotGameTests {
             ars.loadAdditional(saved,h.getLevel().registryAccess());
             h.assertTrue(power(ars).getDouble("growth_credit")==700, "Save/load retains exact paid overflow");
             tick(h,ars);
-            h.assertTrue(ars.growthTime()==699 && power(ars).getDouble("growth_credit")==0,
-                    "Next tick harvests once and applies 700 credit from upstream reset minus one");
-            h.assertTrue(power(ars).getLong("liquid")==0 && power(ars).getLong("gas")==0,
+            h.assertTrue(wheatCount(ars)==1 && ars.growthTime()==700 && power(ars).getDouble("growth_credit")==0,
+                    "After the capped harvest, next tick adds one natural tick and spends 700 saved credit from minus one");
+            h.assertTrue(face(power(ars)).getLong("liquid")==0 && face(power(ars)).getLong("gas")==0,
                     "Retained growth is used without a new resource payment");
             h.assertTrue(ars.saveWithoutMetadata(h.getLevel().registryAccess()).getFloat("grow_cooldown")==0,
                     "Source-assisted harvest skips the five-tick pause");
@@ -415,7 +437,7 @@ public final class ArsPotGameTests {
     }
 
     @GameTest(template="empty", batch="source-overflow")
-    public static void hugeCreditAllowsOnlyOneHarvestPerTickAndResetsWithCrop(GameTestHelper h) {
+    public static void hugeCreditAllowsSixteenHarvestsPerTickAndResetsWithCrop(GameTestHelper h) {
         try (var ignored = new GrowthConfigFixture(Integer.MAX_VALUE, Integer.MAX_VALUE)) {
             var ars=pot(h); fill(ars); tick(h,ars);
             fill(ars);
@@ -423,8 +445,8 @@ public final class ArsPotGameTests {
                 tick(h,ars);
                 int wheat=0;
                 for(int slot:BotanyPotBlockEntity.STORAGE_SLOTS) if(ars.getItem(slot).is(Items.WHEAT)) wheat+=ars.getItem(slot).getCount();
-                h.assertTrue(wheat==tick,"Huge credit must produce exactly one stock wheat harvest per tick");
-                h.assertTrue(power(ars).getLong("gas")==0 && power(ars).getLong("liquid")==500,
+                h.assertTrue(wheat==16*(tick+1),"Huge credit must produce exactly sixteen stock wheat harvests per tick including the first purchase tick");
+                h.assertTrue(face(power(ars)).getLong("gas")==0 && face(power(ars)).getLong("liquid")==500,
                         "Sufficient backlog rejects new gas and cannot spend already buffered liquid");
             }
             ars.setSeed(new ItemStack(Items.BEETROOT_SEEDS));
@@ -436,20 +458,20 @@ public final class ArsPotGameTests {
 
     @GameTest(template="empty", batch="source-overflow")
     public static void unsupportedRecipeHoldsCreditWithoutAcceptingOrSpendingSource(GameTestHelper h) {
-        try(var ignored=new GrowthConfigFixture(1000,1000)) {
+        try(var ignored=new GrowthConfigFixture(1000,1000).harvestLimit(1)) {
             var ars=pot(h); ars.updateGrowthTime(ars.getRequiredGrowthTicks()-301); fill(ars); tick(h,ars);
             BonemealGrowthGameTests.withFertilizer(h,null,ars,()-> {
                 tick(h,ars);
-                h.assertTrue(power(ars).getDouble("growth_credit")==700 && ars.growthTime()==-1,
-                        "Missing recipe holds credit after upstream harvest instead of applying it");
+                h.assertTrue(power(ars).getDouble("growth_credit")==700 && ars.growthTime()==0,
+                        "Missing recipe holds credit after the prior capped harvest and gives only natural growth");
                 h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250,
                         "Missing recipe refuses resource intake despite saved credit");
                 tick(h,ars);
-                h.assertTrue(power(ars).getDouble("growth_credit")==700 && power(ars).getLong("liquid")==500,
+                h.assertTrue(power(ars).getDouble("growth_credit")==700 && face(power(ars)).getLong("liquid")==500,
                         "Unsupported cycles preserve existing credit and buffered liquid");
             });
             tick(h,ars);
-            h.assertTrue(power(ars).getDouble("growth_credit")==501 && ars.growthTime()==1200 && power(ars).getLong("liquid")==0,
+            h.assertTrue(power(ars).getDouble("growth_credit")==502 && ars.growthTime()==-1 && face(power(ars)).getLong("liquid")==0,
                     "Restored recipe uses the bank first, then one due liquid boost when partial credit cannot mature the crop");
         }
         h.succeed();
@@ -458,16 +480,18 @@ public final class ArsPotGameTests {
     @GameTest(template="empty", batch="source-overflow")
     public static void malformedCreditIsBoundedAndSoilResetDiscardsIt(GameTestHelper h) {
         var ars=pot(h);
-        for(double bad:new double[]{Double.NaN, Double.POSITIVE_INFINITY, -7, Double.MAX_VALUE, 2147483648d}) {
+        double[] malformed={Double.NaN, Double.POSITIVE_INFINITY, -7, Double.MAX_VALUE, 4294967296d};
+        double[] expected={0, 0, 0, 4294967295d, 4294967295d};
+        for(int i=0;i<malformed.length;i++) {
             var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
-            saved.getCompound("sourcepots").putDouble("growth_credit",bad);
-            saved.getCompound("sourcepots").putBoolean("source_assisted",true);
+            saved.getCompound("sourcepots_v2").putDouble("growth_credit",malformed[i]);
+            saved.getCompound("sourcepots_v2").putBoolean("source_assisted",true);
             ars.loadAdditional(saved,h.getLevel().registryAccess());
             double credit=power(ars).getDouble("growth_credit");
-            h.assertTrue(Double.isFinite(credit) && credit>=0 && credit<=2147483647d,"Malformed credit must be finite and bounded by one maximum earned boost");
+            h.assertTrue(credit==expected[i],"Malformed credit must be finite and bounded by the residual-plus-purchase envelope");
         }
         var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
-        saved.getCompound("sourcepots").putDouble("growth_credit",700.5);
+        saved.getCompound("sourcepots_v2").putDouble("growth_credit",700.5);
         ars.loadAdditional(saved,h.getLevel().registryAccess());
         h.assertTrue(power(ars).getDouble("growth_credit")==700.5,"Fractional paid credit must survive saving exactly");
         ars.setSoilItem(new ItemStack(Items.SAND));
@@ -486,23 +510,23 @@ public final class ArsPotGameTests {
             @Override public boolean canHarvest(net.darkhax.botanypots.common.api.context.BotanyPotContext context,net.minecraft.world.level.Level level) {return harvestAllowed[0];}
             @Override public void onHarvest(net.darkhax.botanypots.common.api.context.BotanyPotContext context,net.minecraft.world.level.Level level,java.util.function.Consumer<ItemStack> drops) {harvests[0]++;}
         };
-        try(var ignored=new GrowthConfigFixture(1000,1000)) {
+        try(var ignored=new GrowthConfigFixture(1000,1000).harvestLimit(1)) {
             var ars=pot(h);
             var seed=new ItemStack(Items.WHEAT_SEEDS); net.darkhax.botanypots.common.api.data.components.CropOverride.set(seed,crop);
             ars.setSeed(seed); ars.updateGrowthTime(0); fill(ars); tick(h,ars);
             h.assertTrue(power(ars).getDouble("growth_credit")==981,"Short crop retains exactly 981 excess ticks");
             harvestAllowed[0]=false;
             for(int tick=0;tick<8;tick++) tick(h,ars);
-            h.assertTrue(harvests[0]==0 && power(ars).getDouble("growth_credit")==981 && power(ars).getLong("liquid")==500,
+            h.assertTrue(harvests[0]==1 && power(ars).getDouble("growth_credit")==981 && face(power(ars)).getLong("liquid")==500,
                     "Blocked harvest must retain credit and buffered payment without generating loot");
             h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess()).insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250,
                     "Blocked pot rejects new resource intake");
             harvestAllowed[0]=true;
-            for(int tick=0;tick<6 && harvests[0]==0;tick++) tick(h,ars);
-            h.assertTrue(harvests[0]==1 && power(ars).getDouble("growth_credit")==960,
-                    "Unblocked crop uses the native harvest gate once and carries the remaining credit");
             tick(h,ars);
-            h.assertTrue(harvests[0]==2 && power(ars).getDouble("growth_credit")==939,
+            h.assertTrue(harvests[0]==2 && power(ars).getDouble("growth_credit")==969,
+                    "Unblocked crop uses twelve retained ticks to complete its naturally advanced cycle");
+            tick(h,ars);
+            h.assertTrue(harvests[0]==3 && power(ars).getDouble("growth_credit")==949,
                     "Following assisted harvest runs on the next tick with no five-tick pause");
         }
         h.succeed();
@@ -534,18 +558,18 @@ public final class ArsPotGameTests {
     @GameTest(template="empty", batch="source-overflow")
     public static void loadedSufficientBankRejectsPushUntilCreditIsUsed(GameTestHelper h) {
         var ars=pot(h);
-        var gas=MekanismTestAccess.chemical(ars.sourceAccess()); var liquid=ars.sourceAccess().fluidHandler();
+        var gas=MekanismTestAccess.chemical(ars.sourceAccess()); var liquid=ars.sourceAccess().fluidHandler(Direction.NORTH);
         var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
-        saved.getCompound("sourcepots").putDouble("growth_credit",2147483647d);
-        saved.getCompound("sourcepots").putBoolean("source_assisted",true);
+        saved.getCompound("sourcepots_v2").putDouble("growth_credit",2147483647d);
+        saved.getCompound("sourcepots_v2").putBoolean("source_assisted",true);
         ars.loadAdditional(saved,h.getLevel().registryAccess());
-        h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess())==gas && ars.sourceAccess().fluidHandler()==liquid,"Loading must keep neighbor-held handler identities");
+        h.assertTrue(MekanismTestAccess.chemical(ars.sourceAccess())==gas && ars.sourceAccess().fluidHandler(Direction.NORTH)==liquid,"Loading must keep neighbor-held handler identities");
         h.assertTrue(gas.insertChemical(SourceAccessGameTests.gas(250),Action.EXECUTE).getAmount()==250
                 && liquid.fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE)==0,
                 "Before first loaded tick, sufficient credit rejects direct pushes through existing views");
         tick(h,ars);
-        h.assertTrue(ars.canHarvest() && power(ars).getDouble("growth_credit")==2147483647d-(ars.getRequiredGrowthTicks()-1),
-                "First loaded tick uses exactly the growth still needed after one natural tick");
+        h.assertTrue(wheatCount(ars)==16 && ars.growthTime()==-1 && power(ars).getDouble("growth_credit")==2147464433d,
+                "First loaded tick spends 1199 first-cycle ticks and fifteen 1201-tick cycles");
         h.succeed();
     }
 
@@ -556,15 +580,15 @@ public final class ArsPotGameTests {
             var saved=ars.saveWithoutMetadata(h.getLevel().registryAccess());
             h.setBlock(CENTER,Blocks.AIR);
             tick(h,ars);
-            h.assertTrue(power(ars).equals(saved.getCompound("sourcepots")),"Detached entity cannot spend paid credit");
+            h.assertTrue(power(ars).equals(saved.getCompound("sourcepots_v2")),"Detached entity cannot spend paid credit");
             h.runAfterDelay(40,()-> {
                 var restored=new ArsBotanyPotBlockEntity(ars.getBlockPos(),ars.getBlockState());
                 restored.loadAdditional(saved,h.getLevel().registryAccess()); restored.setLevel(h.getLevel());
-                h.assertTrue(power(restored).equals(saved.getCompound("sourcepots")),"Forty unloaded ticks do not change bank or timers");
+                h.assertTrue(power(restored).equals(saved.getCompound("sourcepots_v2")),"Forty unloaded ticks do not change bank or timers");
                 tick(h,restored);
                 int wheat=0; for(int slot:BotanyPotBlockEntity.STORAGE_SLOTS) if(restored.getItem(slot).is(Items.WHEAT)) wheat+=restored.getItem(slot).getCount();
-                h.assertTrue(wheat==1 && power(restored).getDouble("growth_credit")==2147483647d-2d*restored.getRequiredGrowthTicks(),
-                        "Reload grants one native harvest and spends only one following cycle of saved credit");
+                h.assertTrue(wheat==32 && power(restored).getDouble("growth_credit")==2147445218d,
+                        "Reload adds sixteen bounded cycles for this single tick, without unloaded catch-up");
                 h.succeed();
             });
         }
@@ -586,7 +610,7 @@ public final class ArsPotGameTests {
                             varyingAmount,20,false,false,java.util.Optional.empty()));
             BonemealGrowthGameTests.withFertilizer(h,fertilizer,ars,()-> {
                 tick(h,ars);
-                h.assertTrue(ars.growthTime()==38 && power(ars).getLong("gas")==0,
+                h.assertTrue(ars.growthTime()==38 && face(power(ars)).getLong("gas")==0,
                         "One validated positive recipe result must fund exactly the prepared 37-tick boost even if a later evaluation would be zero");
                 tick(h,ars);
                 h.assertTrue(ars.growthTime()==39,"Next tick reevaluates the now nonpositive fertilizer and gives only natural growth");
@@ -633,9 +657,20 @@ public final class ArsPotGameTests {
         MekanismTestAccess.chemical(pot.sourceAccess()).insertChemical(new ChemicalStack(MekanismAPI.CHEMICAL_REGISTRY.getHolder(ResourceLocation.parse("starbunclemania:source_gas")).orElseThrow(),250),Action.EXECUTE);
     }
     private static void fillLiquid(ArsBotanyPotBlockEntity pot) {
-        pot.sourceAccess().fluidHandler().fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE);
+        pot.sourceAccess().fluidHandler(Direction.NORTH).fill(SourceAccessGameTests.fluid(500),FluidAction.EXECUTE);
     }
-    private static CompoundTag power(ArsBotanyPotBlockEntity pot) { return pot.saveWithoutMetadata(pot.getLevel().registryAccess()).getCompound("sourcepots"); }
+    private static CompoundTag face(CompoundTag power) {
+        if(!power.contains("buffers")) power.put("buffers",new CompoundTag());
+        var buffers=power.getCompound("buffers");
+        if(!buffers.contains("north")) buffers.put("north",new CompoundTag());
+        return buffers.getCompound("north");
+    }
+    private static CompoundTag power(ArsBotanyPotBlockEntity pot) { return pot.saveWithoutMetadata(pot.getLevel().registryAccess()).getCompound("sourcepots_v2"); }
+    private static int wheatCount(BotanyPotBlockEntity pot) {
+        int count = 0;
+        for (int slot : BotanyPotBlockEntity.STORAGE_SLOTS) if (pot.getItem(slot).is(Items.WHEAT)) count += pot.getItem(slot).getCount();
+        return count;
+    }
     private static com.hollingsworth.arsnouveau.common.block.tile.SourceJarTile jar(GameTestHelper h) {
         h.setBlock(CENTER.above(2),BuiltInRegistries.BLOCK.get(ResourceLocation.parse("ars_nouveau:source_jar")));
         var jar=(com.hollingsworth.arsnouveau.common.block.tile.SourceJarTile)h.getBlockEntity(CENTER.above(2)); jar.setSource(2500); return jar;
