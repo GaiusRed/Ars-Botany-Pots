@@ -22,7 +22,7 @@ import net.neoforged.neoforge.gametest.PrefixGameTestTemplate;
 @PrefixGameTestTemplate(false)
 public final class SourceAccessGameTests {
     static final BlockPos CENTER = new BlockPos(5, 2, 5);
-    private static final SourceSettings SETTINGS = SourceSettings.defaults();
+    private static final SourceSettings SETTINGS = GrowthConfigFixture.regressionSettings();
 
     @net.minecraft.gametest.framework.AfterBatch(batch="resources")
     public static void clearResourceFixtures(net.minecraft.server.level.ServerLevel level) { ResourceTestEnvironment.clear(level); }

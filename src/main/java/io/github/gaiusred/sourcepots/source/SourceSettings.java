@@ -33,13 +33,13 @@ public record SourceSettings(
 
     public static SourceSettings defaults() {
         return new SourceSettings(2500, 80, 100, 10, 3,
-                new ModeSettings(500, 500, defaultTiers(5, 500, 700)),
-                new ModeSettings(250, 250, defaultTiers(1, 400, 600)), new GrowthSettings(600, 800), 16);
+                new ModeSettings(1000, 1000, defaultTiers(60, 240, 390, 541, 691)),
+                new ModeSettings(60, 60, defaultTiers(60, 541, 751, 931, 1141)), new GrowthSettings(15, 15), 16);
     }
 
-    private static List<TierSettings> defaultTiers(int interval, int min, int max) {
-        return IntStream.rangeClosed(1, 4)
-                .mapToObj(n -> new TierSettings(interval, new GrowthSettings(min * n, max * n))).toList();
+    private static List<TierSettings> defaultTiers(int interval, int... growthTicks) {
+        return IntStream.of(growthTicks)
+                .mapToObj(ticks -> new TierSettings(interval, new GrowthSettings(ticks, ticks))).toList();
     }
 
     public TierSettings tier(SourceMode mode, int fundedSides) {

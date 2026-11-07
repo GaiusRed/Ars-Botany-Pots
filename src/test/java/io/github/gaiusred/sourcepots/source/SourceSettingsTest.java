@@ -13,18 +13,27 @@ class SourceSettingsTest {
         assertEquals(100, settings.jarPoweredDurationTicks());
         assertEquals(10, settings.jarBoostIntervalTicks());
         assertEquals(3, settings.jarSearchRange());
-        assertEquals(new SourceSettings.GrowthSettings(600, 800), settings.tier(SourceMode.JAR, 0).growth());
-        assertEquals(500, settings.liquid().cost());
-        assertEquals(500, settings.liquid().capacity());
-        assertEquals(250, settings.gas().cost());
-        assertEquals(250, settings.gas().capacity());
+        assertEquals(new SourceSettings.GrowthSettings(15, 15), settings.tier(SourceMode.JAR, 0).growth());
+        assertEquals(1000, settings.liquid().cost());
+        assertEquals(1000, settings.liquid().capacity());
+        assertEquals(60, settings.gas().cost());
+        assertEquals(60, settings.gas().capacity());
+        int[] liquidGrowth = {240, 390, 541, 691};
+        int[] gasGrowth = {541, 751, 931, 1141};
         for (int n = 1; n <= 4; n++) {
-            assertEquals(new SourceSettings.TierSettings(5, new SourceSettings.GrowthSettings(500*n, 700*n)), settings.tier(SourceMode.LIQUID, n));
-            assertEquals(new SourceSettings.TierSettings(1, new SourceSettings.GrowthSettings(400*n, 600*n)), settings.tier(SourceMode.GAS, n));
+            assertEquals(new SourceSettings.TierSettings(60, new SourceSettings.GrowthSettings(liquidGrowth[n-1], liquidGrowth[n-1])), settings.tier(SourceMode.LIQUID, n));
+            assertEquals(new SourceSettings.TierSettings(60, new SourceSettings.GrowthSettings(gasGrowth[n-1], gasGrowth[n-1])), settings.tier(SourceMode.GAS, n));
         }
-        assertEquals(2000, settings.tier(SourceMode.LIQUID, 4).growth().minTicks());
-        assertEquals(2400, settings.tier(SourceMode.GAS, 4).growth().maxTicks());
         assertEquals(16, settings.maxHarvestsPerTick());
+    }
+
+    @Test void defaultCostsMatchMeasuredGeneratorBudgets() {
+        var settings = SourceSettings.defaults();
+        double liquidPerTick = (double) settings.liquid().cost() / settings.liquid().tier(1).intervalTicks();
+        double gasPerTick = (double) settings.gas().cost() / settings.gas().tier(1).intervalTicks();
+        assertEquals(1.5, 25.0 / liquidPerTick, 1e-9);
+        assertEquals(1.0, 1.0 / gasPerTick, 1e-9);
+        assertEquals(375000, settings.jarSourceCost() * 12000 / settings.jarPaymentIntervalTicks());
     }
 
     @Test void validatesCostsCapacitiesTierCountsAndRanges() {

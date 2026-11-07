@@ -1,5 +1,29 @@
 # Ars Botany Pots verification
 
+## ATM10 Aero rebalance (2026-11-07)
+
+The user's pack measurements showed excessive growth and unsustainable fluid consumption. This rebalance changes only the production defaults and their tier-list helper. Jar payment settings, resource priority, crop requirements and harvest logic remain unchanged. The [README](../../README.md#defaults) lists the replacement values.
+
+Fresh validation passed: 36 unit tests, 105 full-integration GameTests and five smoke GameTests in each of the core, liquid-only and Mekanism-without-Source-gas profiles. The build passed. Accounting and high-speed regression cases now use an explicit fast test profile; smoke tests retain the real defaults. A separate native test installs the complete production settings and runs each tier through 12,000 calls to the registered pot ticker, clearing outputs after each call.
+
+| Tier | Wheat in 12,000 ticks from empty progress | Resource consumed |
+| --- | ---: | ---: |
+| Jar | 24 | 375,000 Source |
+| Liquid, 1 face | 49 | 200,000 mB |
+| Liquid, 2 faces | 74 | 400,000 mB |
+| Liquid, 3 faces | 100 | 600,000 mB |
+| Liquid, 4 faces | 125 | 800,000 mB |
+| Gas, 1 face | 100 | 12,000 native units |
+| Gas, 2 faces | 135 | 24,000 native units |
+| Gas, 3 faces | 165 | 36,000 native units |
+| Gas, 4 faces | 200 | 48,000 native units |
+
+These are development-runtime wheat-on-dirt results, with continuously funded inputs. The user subsequently verified the growth rates in ATM10 Aero. No additional in-game consumption measurement is claimed. Whole-item counts depend on measurement phase; the corresponding steady averages are approximately 25, 50, 75, 100, 125, 100, 135, 165 and 200 wheat per ten minutes at 20 TPS.
+
+Liquid consumption is 16.67 mB/t per face, so a 25 mB/t condenser covers 1.5 faces. Gas consumption is one native unit/t per face, matching an unupgraded rotary condensentrator. Faster machine upgrades increase supply. Backups and command output are under the ignored `.superpowers/atm10-rebalance/` directory.
+
+The rebuilt jar and all 30 intended balance values were deployed to the user's CurseForge ATM10A 0.8.0 instance. Jar payment values and the harvest cap were preserved; no `ars test` serverconfig override was present. Built and deployed SHA-256 matched: `15ACADC5473C751E0D340F91A77A6C28B09169CBC5B1965544B84E2D030757FC`. CurseForge launched client PID 20740, the player joined, and the game world was visually confirmed with the existing machines and drawers. The final log check found two expected SourcePots warnings: saved buffers at (24, 1, 11) and (19, 1, 11) were clamped to the reduced capacities (liquid 1,000 mB, gas 60 units). No SourcePots errors were found. The game was left running; no blocks or inventories were edited by the agent. Existing buffer amounts may clamp to the reduced gas capacity on restoration, and any previously paid growth can affect the initial measurement window.
+
 ## Current revision: per-face Source and bounded harvests (2026-11-07)
 
 The current operating rules and all nine default tiers are in the [README](../../README.md#defaults). Each horizontal face has independent liquid/gas storage. Only stored full payments count toward a tier. Gas > liquid > Jar priority is fixed; a purchase spends every funded face of the selected mode and samples aggregate growth once. Suppressed Jar timers expire without renewal. One cooldown and one purchase per real tick apply across modes.
